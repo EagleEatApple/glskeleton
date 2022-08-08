@@ -14,7 +14,9 @@ GL Skeleton is an OpenGL application template based on PySide6 and PyOpenG.
 ### `2022-08-08`
 
 Change images, all of images come from [iconfinder](https://www.iconfinder.com/).
+
 Modify the code to use modern OpenGL, now it's using OpenGL 4.0 by default.
+
 You're able to change the OpenGL version in baseapp.py:
 ```python
 class BaseApplication(QApplication):
@@ -30,6 +32,7 @@ class BaseApplication(QApplication):
 ```
 
 Add About Dialog to show OpenGL information
+
 ![screenshot](./screenshot/aboutdialog.png)
 
 
@@ -40,6 +43,7 @@ Upload the code at first time.
 
 ## Run
 Tested on Python 3.8.6, Python 3.9.7 and Windows 10 OS
+
 `python main.py`
 
 
