@@ -3,7 +3,7 @@ from OpenGL.GL import *
 
 class OpenGLTools(object):
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.version = glGetString(GL_VERSION)
         self.renderer = glGetString(GL_RENDERER)
         self.vendor = glGetString(GL_VENDOR)

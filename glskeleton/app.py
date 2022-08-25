@@ -1,23 +1,16 @@
 import sys
 
-from PySide6.QtGui import QScreen
-from PySide6.QtWidgets import QApplication
-
 from baseapp import BaseApplication
 from mainwindow import MainWindow
+from maindockwindow import MainDockWindow
 from utils import OpenGLTools
 
 
-def main():
-    app = BaseApplication(sys.argv, major=2, minor=0)
-    window = MainWindow()
+def main() -> None:
+    app = BaseApplication(sys.argv)
+    # window = MainWindow()
+    window = MainDockWindow()
     window.show()
-
-    screenCenter = QScreen.availableGeometry(
-        QApplication.primaryScreen()).center()
-    position = window.frameGeometry()
-    position.moveCenter(screenCenter)
-    window.move(position.topLeft())
 
     """ for debugging """
     # print(OpenGLTools().gl_information)

@@ -1,18 +1,20 @@
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QPlainTextEdit, QVBoxLayout, QHBoxLayout, QLabel
 from PySide6.QtGui import QPixmap
+
 from utils import OpenGLTools
+
 
 # show OpenGL information
 class AboutDialog(QDialog):
-    def __init__(self, parent):
+    def __init__(self, path: str) -> None:
         super().__init__()
         self.setWindowTitle("About OpenGL")
-        pixmap = QPixmap(parent.icons_path + "OpenGL-Logo.png")
+        pixmap = QPixmap(path + "OpenGL-Logo.png")
         self.setWindowIcon(pixmap)
         qbtn = QDialogButtonBox.Ok
         self.buttonBox = QDialogButtonBox(qbtn)
         self.buttonBox.accepted.connect(self.accept)
-        
+
         # use QPlainTextEdit to show current OpenGL information
 
         self.vlayout = QVBoxLayout()
@@ -33,4 +35,3 @@ class AboutDialog(QDialog):
         self.vlayout.addLayout(self.hlayout)
         self.vlayout.addWidget(self.buttonBox)
         self.setLayout(self.vlayout)
-        

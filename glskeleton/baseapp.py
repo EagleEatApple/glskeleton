@@ -8,7 +8,7 @@ from PySide6.QtGui import QSurfaceFormat
 
 
 class BaseApplication(QApplication):
-    def __init__(self, argv, bufferSize=24, samples=4, major=4, minor=0):
+    def __init__(self, argv: list[str], bufferSize: int = 24, samples: int = 4, major: int = 4, minor: int = 0) -> None:
         super().__init__(argv)
         # initialize OpenGL profile, support OpenGL 4.0 by default
         self.format = QSurfaceFormat()

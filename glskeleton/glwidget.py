@@ -1,6 +1,11 @@
+import sys
+
 import numpy as np
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
+from PySide6.QtCore import QTimerEvent
 from OpenGL.GL import *
+
+from baseapp import BaseApplication
 
 
 # implement tessellation
@@ -56,15 +61,15 @@ class GLWidget(QOpenGLWidget):
     }
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.startTimer(20)
         self.program = None
 
-    def timerEvent(self, event):
+    def timerEvent(self, event: QTimerEvent) -> None:
         self.update()
 
-    def initializeGL(self):
+    def initializeGL(self) -> None:
         self.program = glCreateProgram()
         vs = glCreateShader(GL_VERTEX_SHADER)
         glShaderSource(vs, GLWidget.vs_source)
@@ -94,9 +99,21 @@ class GLWidget(QOpenGLWidget):
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
-    def paintGL(self):
+    def paintGL(self) -> None:
         green = np.array([0.0, 0.25, 0.0, 1.0], 'f')
         glClearBufferfv(GL_COLOR, 0, green)
 
         glUseProgram(self.program)
         glDrawArrays(GL_PATCHES, 0, 3)
+
+
+def test() -> None:
+    """Run GLWidget test"""
+    app = BaseApplication(sys.argv)
+    widget = GLWidget()
+    widget.show()
+    sys.exit(app.exec())
+
+
+if __name__ == '__main__':
+    test()

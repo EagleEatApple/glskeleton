@@ -7,37 +7,83 @@ from PySide6.QtCore import *
 
 from baseapp import BaseApplication
 from glwidget import GLWidget
+from glcubewidget import GLCubeWidget
+from glfractalwidget import GLFractalWidget
 from about import AboutDialog
 
 
-class MainWindow(QMainWindow):
+class MainDockWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.icons_path = os.path.abspath(
             os.path.dirname(__file__)) + '/images/'
         self.filters = "Any File (*)"
-        self.frame = QFrame()
-        self.frame.setFrameShape(QFrame.StyledPanel)
-        self.frame.setLineWidth(1)
-        self.setCentralWidget(self.frame)
-        self.v_layout = QVBoxLayout()
         self.gl_widget = GLWidget()
-        self.v_layout.addWidget(self.gl_widget)
-        self.frame.setLayout(self.v_layout)
+        self.cube_widget = GLCubeWidget()
+        self.fractal_widget = GLFractalWidget()
+        self.gl_demos = {"Cube": self.cube_widget, "Tessellation": self.gl_widget,
+                         "Fractal": self.fractal_widget}
         self.create_ui()
 
     def create_ui(self) -> None:
         self.setWindowTitle("OpenGL Skeleton")
         self.setWindowIcon(QIcon(self.icons_path + 'app.png'))
         self.setGeometry(100, 100, 800, 600)
+
         # move main window to the center of the screen
         self.move(QApplication.primaryScreen(
         ).availableGeometry().center() - self.rect().center())
-
         self.create_action()
         self.create_menu_bar()
         self.create_toolbar()
+        self.create_dockWidget()
+        self.create_tabWidget()
         self.statusBar().showMessage('Ready', 10000)
+
+    def create_tabWidget(self) -> None:
+        self.tabs = QTabWidget(self)
+        self.tabs.setTabsClosable(True)
+        for key in self.gl_demos:
+            self.tabs.addTab(self.gl_demos[key], key)
+        self.setCentralWidget(self.tabs)
+        self.tabs.tabCloseRequested.connect(self.close_current_tab)
+
+    def close_current_tab(self, index: int) -> None:
+        # keep at least one tab
+        if self.tabs.count() < 2:
+            return
+        self.tabs.removeTab(index)
+
+    def create_dockWidget(self) -> None:
+        self.dock_tree_Widget = QDockWidget("OpenGL Demos", self)
+        self.dock_tree_Widget.setAllowedAreas(
+            Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        self.dock_tree_Widget.setFeatures(
+            QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetFloatable)
+        self.dock_tree_Widget.setMinimumWidth(200)
+        self.tree_widget = QTreeWidget()
+        self.tree_widget.setHeaderHidden(True)
+        self.tree_widget.itemDoubleClicked.connect(self.doubleclick_tree_item)
+
+        for demo in self.gl_demos:
+            item = QTreeWidgetItem(self.tree_widget)
+            item.setText(0, demo)
+            self.tree_widget.addTopLevelItem(item)
+        self.dock_tree_Widget.setWidget(self.tree_widget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.dock_tree_Widget)
+
+    def doubleclick_tree_item(self, item: QTreeWidgetItem, column: int) -> None:
+        title = item.text(0)
+        exist = False
+        for i in range(0, self.tabs.count()):
+            text = self.tabs.tabText(i)
+            if text == title:
+                exist = True
+                self.tabs.setCurrentIndex(i)
+                break
+        if not exist:
+            index = self.tabs.addTab(self.gl_demos[title], title)
+            self.tabs.setCurrentIndex(index)
 
     def create_menu_bar(self) -> None:
         self.file_menu = self.menuBar().addMenu("&File")
@@ -115,7 +161,7 @@ class MainWindow(QMainWindow):
 def test() -> None:
     """Run MainWindow test"""
     app = BaseApplication(sys.argv)
-    mainwindow = MainWindow()
+    mainwindow = MainDockWindow()
     mainwindow.showMaximized()
     sys.exit(app.exec())
 
