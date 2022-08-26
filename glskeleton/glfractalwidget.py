@@ -6,6 +6,8 @@ from PySide6.QtCore import QTimerEvent
 from OpenGL.GL import *
 
 from baseapp import BaseApplication
+from shader import *
+from program import *
 
 
 # implement fractal - mandelbrot set
@@ -66,37 +68,6 @@ class GLFractalWidget(QOpenGLWidget):
     }
     """
 
-    def make_shader(self, shader_type: Constant, src: str) -> GLuint:
-        shader = glCreateShader(shader_type)
-        glShaderSource(shader, src)
-        glCompileShader(shader)
-        status = glGetShaderiv(shader, GL_COMPILE_STATUS)
-        if status == GL_FALSE:
-            strInfoLog = glGetShaderInfoLog(shader).decode('ascii')
-            strShaderType = ""
-            if shader_type is GL_VERTEX_SHADER:
-                strShaderType = "vertex"
-            elif shader_type is GL_GEOMETRY_SHADER:
-                strShaderType = "geometry"
-            elif shader_type is GL_FRAGMENT_SHADER:
-                strShaderType = "fragment"
-            raise Exception("Compilation failure for " +
-                            strShaderType + " shader:\n" + strInfoLog)
-        return shader
-
-    def make_program(self, shader_list: list) -> GLuint:
-        program = glCreateProgram()
-        for shader in shader_list:
-            glAttachShader(program, shader)
-        glLinkProgram(program)
-        status = glGetProgramiv(program, GL_LINK_STATUS)
-        if status == GL_FALSE:
-            strInfoLog = glGetProgramInfoLog(program)
-            raise Exception("Linker failure: \n" + strInfoLog)
-        for shader in shader_list:
-            glDetachShader(program, shader)
-        return program
-
     def __init__(self) -> None:
         super().__init__()
         self.startTimer(20)
@@ -107,11 +78,9 @@ class GLFractalWidget(QOpenGLWidget):
 
     def initializeGL(self) -> None:
         self.aspect = 1.0 * self.width() / self.height()
-        vertex_shader = self.make_shader(
-            GL_VERTEX_SHADER, GLFractalWidget.vs_source)
-        fragment_shader = self.make_shader(
-            GL_FRAGMENT_SHADER, GLFractalWidget.fs_source)
-        program = self.make_program([vertex_shader, fragment_shader])
+        vertex_shader = VertexShader(GLFractalWidget.vs_source)
+        fragment_shader = FragmentShader(GLFractalWidget.fs_source)
+        program = Program([vertex_shader, fragment_shader])
         self.vert_values = np.array([-1, -1 * self.aspect, 0,
                                      1, -1 * self.aspect, 0,
                                      -1, 1 * self.aspect, 0,
@@ -130,7 +99,7 @@ class GLFractalWidget(QOpenGLWidget):
 
         glClearColor(0, 0, 0, 0)
         glClear(GL_COLOR_BUFFER_BIT)
-        glUseProgram(program)
+        program.useProgram()
 
         # setup coordinate buffer
         glEnableVertexAttribArray(0)
@@ -138,8 +107,8 @@ class GLFractalWidget(QOpenGLWidget):
         glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, None)
 
         # setup uniforms for fragment shader
-        self.transform_loc = glGetUniformLocation(program, 'transform')
-        self.max_iters_loc = glGetUniformLocation(program, 'max_iters')
+        self.transform_loc = glGetUniformLocation(program.programObject, 'transform')
+        self.max_iters_loc = glGetUniformLocation(program.programObject, 'max_iters')
 
         self.state = {
             'zoom': 1,

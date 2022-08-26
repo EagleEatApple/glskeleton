@@ -6,6 +6,8 @@ from PySide6.QtCore import QTimerEvent
 from OpenGL.GL import *
 
 from baseapp import BaseApplication
+from shader import *
+from program import *
 
 
 # implement tessellation
@@ -64,46 +66,26 @@ class GLWidget(QOpenGLWidget):
     def __init__(self) -> None:
         super().__init__()
         self.startTimer(20)
-        self.program = None
 
     def timerEvent(self, event: QTimerEvent) -> None:
         self.update()
 
     def initializeGL(self) -> None:
-        self.program = glCreateProgram()
-        vs = glCreateShader(GL_VERTEX_SHADER)
-        glShaderSource(vs, GLWidget.vs_source)
-        glCompileShader(vs)
-
-        tcs = glCreateShader(GL_TESS_CONTROL_SHADER)
-        glShaderSource(tcs, GLWidget.tcs_source)
-        glCompileShader(tcs)
-
-        tes = glCreateShader(GL_TESS_EVALUATION_SHADER)
-        glShaderSource(tes, GLWidget.tes_source)
-        glCompileShader(tes)
-
-        fs = glCreateShader(GL_FRAGMENT_SHADER)
-        glShaderSource(fs, GLWidget.fs_source)
-        glCompileShader(fs)
-
-        glAttachShader(self.program, vs)
-        glAttachShader(self.program, tcs)
-        glAttachShader(self.program, tes)
-        glAttachShader(self.program, fs)
-
-        glLinkProgram(self.program)
+        vs = VertexShader(GLWidget.vs_source)
+        tcs = TessellationControlShader(GLWidget.tcs_source)
+        tes = TessellationEvaluationShader(GLWidget.tes_source)
+        fs = FragmentShader(GLWidget.fs_source)
+        self.program = Program([vs, tcs, tes,fs])
 
         vao = glGenVertexArrays(1)
         glBindVertexArray(vao)
-
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
     def paintGL(self) -> None:
         green = np.array([0.0, 0.25, 0.0, 1.0], 'f')
         glClearBufferfv(GL_COLOR, 0, green)
 
-        glUseProgram(self.program)
+        self.program.useProgram()
         glDrawArrays(GL_PATCHES, 0, 3)
 
 

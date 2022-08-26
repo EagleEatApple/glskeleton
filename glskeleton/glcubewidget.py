@@ -8,6 +8,8 @@ from PySide6.QtCore import QTimerEvent
 import OpenGL.GL as GL
 
 from baseapp import BaseApplication
+from shader import *
+from program import *
 
 
 # draw a cube on the screen
@@ -51,7 +53,7 @@ class GLCubeWidget(QOpenGLWidget):
         matrix[...] = dot(matrix, translation_matrix)
         return matrix
 
-    def frustum(self, left:float, right:float, bottom:float, top:float, znear:float, zfar:float)->ndarray:
+    def frustum(self, left: float, right: float, bottom: float, top: float, znear: float, zfar: float) -> ndarray:
         """
         Build a perspective matrix from the clipping planes, or camera 'frustrum'
         volume.
@@ -73,7 +75,7 @@ class GLCubeWidget(QOpenGLWidget):
         perspective_matrix[2, 3] = -1.0
         return perspective_matrix
 
-    def perspective(self, fovy:float, aspect:float, znear:float, zfar:float)->ndarray:
+    def perspective(self, fovy: float, aspect: float, znear: float, zfar: float) -> ndarray:
         """
         Build a perspective matrix from field of view, aspect ratio and depth
         planes.
@@ -87,7 +89,7 @@ class GLCubeWidget(QOpenGLWidget):
         w = h * aspect
         return self.frustum(-w, w, -h, h, znear, zfar)
 
-    def rotate(self, matrix:ndarray, angle:float, x:float, y:float, z:float)->ndarray:
+    def rotate(self, matrix: ndarray, angle: float, x: float, y: float, z: float) -> ndarray:
         """
         Rotate a matrix around an axis.
         :param matrix: The matrix to rotate.
@@ -157,37 +159,10 @@ class GLCubeWidget(QOpenGLWidget):
         }
         """
 
-        program = GL.glCreateProgram()
-        vertex = GL.glCreateShader(GL.GL_VERTEX_SHADER)
-        fragment = GL.glCreateShader(GL.GL_FRAGMENT_SHADER)
-        GL.glShaderSource(vertex, vertex_code)
-        GL.glCompileShader(vertex)
-
-        # this logs issues the shader compiler finds.
-        log = GL.glGetShaderInfoLog(vertex)
-        if isinstance(log, bytes):
-            log = log.decode()
-        for line in log.split("\n"):
-            print(line)
-
-        GL.glAttachShader(program, vertex)
-        GL.glShaderSource(fragment, fragment_code)
-        GL.glCompileShader(fragment)
-
-        # this logs issues the shader compiler finds.
-        log = GL.glGetShaderInfoLog(fragment)
-        if isinstance(log, bytes):
-            log = log.decode()
-        for line in log.split("\n"):
-            print(line)
-
-        GL.glAttachShader(program, fragment)
-        GL.glValidateProgram(program)
-        GL.glLinkProgram(program)
-
-        GL.glDetachShader(program, vertex)
-        GL.glDetachShader(program, fragment)
-        GL.glUseProgram(program)
+        vertex = VertexShader(vertex_code)
+        fragment = FragmentShader(fragment_code)
+        program = Program([vertex, fragment])
+        program.useProgram()
 
         # Create vertex buffers and shader constants
         # ------------------------------------------
@@ -267,7 +242,7 @@ class GLCubeWidget(QOpenGLWidget):
             dtype=uint32,
         )
 
-        shader_data:dict = {"buffer": {}, "constants": {}}
+        shader_data: dict = {"buffer": {}, "constants": {}}
 
         GL.glBindVertexArray(GL.glGenVertexArrays(1))  # Have to do this first
 
@@ -279,13 +254,13 @@ class GLCubeWidget(QOpenGLWidget):
         stride = vertices.strides[0]
         offset = ctypes.c_void_p(0)
 
-        loc = GL.glGetAttribLocation(program, "vertex_position")
+        loc = GL.glGetAttribLocation(program.programObject, "vertex_position")
         GL.glEnableVertexAttribArray(loc)
         GL.glVertexAttribPointer(loc, 3, GL.GL_FLOAT, False, stride, offset)
 
         offset = ctypes.c_void_p(vertices.dtype["vertex_position"].itemsize)
 
-        loc = GL.glGetAttribLocation(program, "vertex_colour")
+        loc = GL.glGetAttribLocation(program.programObject, "vertex_colour")
         GL.glEnableVertexAttribArray(loc)
         GL.glVertexAttribPointer(loc, 4, GL.GL_FLOAT, False, stride, offset)
 
@@ -310,17 +285,17 @@ class GLCubeWidget(QOpenGLWidget):
         )
 
         shader_data["constants"]["model"] = GL.glGetUniformLocation(
-            program, "model")
+            program.programObject, "model")
         GL.glUniformMatrix4fv(
             shader_data["constants"]["model"], 1, False, eye(4))
 
         shader_data["constants"]["view"] = GL.glGetUniformLocation(
-            program, "view")
+            program.programObject, "view")
         view = self.translate(eye(4), z=-6)
         GL.glUniformMatrix4fv(shader_data["constants"]["view"], 1, False, view)
 
         shader_data["constants"]["projection"] = GL.glGetUniformLocation(
-            program, "projection"
+            program.programObject, "projection"
         )
         GL.glUniformMatrix4fv(
             shader_data["constants"]["projection"], 1, False, eye(4))
@@ -328,14 +303,14 @@ class GLCubeWidget(QOpenGLWidget):
         # This colour is multiplied with the base vertex colour in producing
         # the final output
         shader_data["constants"]["colour_mul"] = GL.glGetUniformLocation(
-            program, "colour_mul"
+            program.programObject, "colour_mul"
         )
         GL.glUniform4f(shader_data["constants"]["colour_mul"], 1, 1, 1, 1)
 
         # This colour is added on to the base vertex colour in producing
         # the final output
         shader_data["constants"]["colour_add"] = GL.glGetUniformLocation(
-            program, "colour_add"
+            program.programObject, "colour_add"
         )
         GL.glUniform4f(shader_data["constants"]["colour_add"], 0, 0, 0, 0)
 

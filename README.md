@@ -14,6 +14,22 @@ GL Skeleton requires at least python 3.5, because GL Skeleton uses "type hints" 
 
 ## Change Log
 
+### `2022-08-26`
+
+Refactory the code by extracting Shader and Program classes.
+```python
+class Shader(object):
+    def __init__(self, type: GL.Constant, source: str) -> None:
+        self.type: GL.Constant = type
+        self.shaderObject: GL.GLuint = GL.glCreateShader(type)
+		......
+
+class Program(object):
+    def __init__(self, shaders: list[Shader]) -> None:
+        self.programObject: GL.GLuint = GL.glCreateProgram()
+		......		
+```		
+
 ### `2022-08-25`
 
 Implement dockable tree/tab view, and provide 3 demos:
