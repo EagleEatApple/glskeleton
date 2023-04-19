@@ -1,5 +1,5 @@
 # GL Skeleton
-GL Skeleton is an OpenGL application template based on PySide6 and PyOpenG.
+GL Skeleton is a 3D OpenGL application template based on PySide6 and PyOpenGL.
 GL Skeleton requires at least python 3.5, because GL Skeleton uses "type hints" which introduced by Python 3.5.
 
 ## Screenshot
@@ -13,6 +13,25 @@ GL Skeleton requires at least python 3.5, because GL Skeleton uses "type hints" 
 * numpy
 
 ## Change Log
+
+### `2023-04-19`
+
+Refactory the code by extracting more OpenGL classes.
+```python
+class BufferObject(OpenGLObject):
+    def __init__(self, target: GLenum, usage: GLenum) -> None:
+        self.name  = glGenBuffers(1)
+        self.target = target
+        self.usage = usage
+		......
+
+class VertexArrayObject(OpenGLObject):
+    def __init__(self) -> None:
+        self.name  = glGenVertexArrays(1)
+        self.vbo = None
+        self.ebo = None
+		......		
+```
 
 ### `2022-08-26`
 
@@ -57,7 +76,6 @@ class BaseApplication(QApplication):
 ```
 
 Add About Dialog to show OpenGL information
-![screenshot](./screenshot/mainwindow.png)
 ![screenshot](./screenshot/aboutdialog.png)
 
 
@@ -67,8 +85,7 @@ Upload the code at first time.
 
 
 ## Run
-Tested on Python 3.8.6, Python 3.9.7 and Windows 10 OS
-`python app.py`
-
-
-
+Tested on Python 3.8.6, 3.9.7, 3.10.6 and Windows 10 OS
+Clone the repository, and then
+cd glskeleton
+python app.py

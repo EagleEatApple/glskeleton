@@ -6,8 +6,11 @@ from PySide6.QtCore import QTimerEvent
 from OpenGL.GL import *
 
 from baseapp import BaseApplication
-from shader import *
-from program import *
+from py3gl4.shader import VertexShader, FragmentShader
+from py3gl4.program import Program, Uniform, VertexAttribute
+from py3gl4.vertexarrayobject import VertexArrayObject
+from py3gl4.buffer import VertexBufferObject
+
 
 
 # implement fractal - mandelbrot set
@@ -15,7 +18,7 @@ from program import *
 class GLFractalWidget(QOpenGLWidget):
 
     vs_source = """
-    #version 410 core
+    #version 430 core
     layout(location = 0) in vec3 vertexPosition_modelspace;
     out vec2 fragmentCoord;
     void main(){
@@ -25,7 +28,7 @@ class GLFractalWidget(QOpenGLWidget):
     """
 
     fs_source = """
-    #version 410 core
+    #version 430 core
     in vec2 fragmentCoord;
     out vec3 color;
     uniform dmat3 transform;
@@ -80,7 +83,13 @@ class GLFractalWidget(QOpenGLWidget):
         self.aspect = 1.0 * self.width() / self.height()
         vertex_shader = VertexShader(GLFractalWidget.vs_source)
         fragment_shader = FragmentShader(GLFractalWidget.fs_source)
-        program = Program([vertex_shader, fragment_shader])
+        self.program = Program([vertex_shader, fragment_shader])
+
+        # setup vertex attributes and uniforms based on shader code
+        self.program.addVertexAttribute(VertexAttribute("vertexPosition_modelspace", 0, 3, GL_DOUBLE, GL_FALSE, 0, 0))
+        self.program.addUniform(Uniform('transform', GL_DOUBLE_MAT3))
+        self.program.addUniform(Uniform('max_iters', GL_INT))
+
         self.vert_values = np.array([-1, -1 * self.aspect, 0,
                                      1, -1 * self.aspect, 0,
                                      -1, 1 * self.aspect, 0,
@@ -90,26 +99,9 @@ class GLFractalWidget(QOpenGLWidget):
                                      ], dtype='float64')
 
         # creating vertex array
-        vert_array = glGenVertexArrays(1)
-        glBindVertexArray(vert_array)
-
-        vert_buffer = glGenBuffers(1)
-        glBindBuffer(GL_ARRAY_BUFFER, vert_buffer)
-        glBufferData(GL_ARRAY_BUFFER, self.vert_values, GL_STATIC_DRAW)
-
-        glClearColor(0, 0, 0, 0)
-        glClear(GL_COLOR_BUFFER_BIT)
-        program.useProgram()
-
-        # setup coordinate buffer
-        glEnableVertexAttribArray(0)
-        glBindBuffer(GL_ARRAY_BUFFER, vert_buffer)
-        glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, None)
-
-        # setup uniforms for fragment shader
-        self.transform_loc = glGetUniformLocation(program.programObject, 'transform')
-        self.max_iters_loc = glGetUniformLocation(program.programObject, 'max_iters')
-
+        self.vao = VertexArrayObject()
+        vbo = VertexBufferObject()
+        self.vao.setVBOVertexAttributes(vbo,self.vert_values, self.program)
         self.state = {
             'zoom': 1,
             'pos_x': -0.7600189058857209,
@@ -118,13 +110,20 @@ class GLFractalWidget(QOpenGLWidget):
         }
 
     def paintGL(self) -> None:
+        glClearColor(0, 0, 0, 0)
+        glClear(GL_COLOR_BUFFER_BIT)
+        self.program.use()
+
         zoom = self.state['zoom']
         pos_x = self.state['pos_x']
         pos_y = self.state['pos_y']
-        glUniformMatrix3dv(self.transform_loc, 1, False,
-                           np.array([self.aspect * zoom, 0, pos_x, 0, 1 * zoom, pos_y, 0, 0, 1 * zoom], dtype='float64'))
-        glUniform1i(self.max_iters_loc, int(self.state['max_iters']))
+        self.program.uniforms['transform'].setDMat3(np.array([self.aspect * zoom, 0, pos_x, 0, 1 * zoom, pos_y, 0, 0, 1 * zoom], dtype='float64'))
+        iters = int(self.state['max_iters'])
+        self.program.uniforms['max_iters'].setInt(iters)
+
+        self.vao.bind()
         glDrawArrays(GL_TRIANGLES, 0, int(len(self.vert_values) / 3))
+        self.vao.unbind()
 
     def resizeGL(self, width: int, height: int) -> None:
         self.aspect = 1.0 * self.width() / self.height()

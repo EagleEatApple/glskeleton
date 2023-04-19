@@ -13,8 +13,9 @@ from about import AboutDialog
 
 
 class MainDockWindow(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(self, app:BaseApplication) -> None:
         super().__init__()
+        self.app = app
         self.icons_path = os.path.abspath(
             os.path.dirname(__file__)) + '/images/'
         self.filters = "Any File (*)"
@@ -154,7 +155,7 @@ class MainDockWindow(QMainWindow):
         pass
 
     def help_about(self) -> None:
-        dlg = AboutDialog(self.icons_path)
+        dlg = AboutDialog(self.icons_path, self.app)
         dlg.exec()
 
 

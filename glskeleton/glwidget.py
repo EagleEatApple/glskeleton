@@ -6,8 +6,9 @@ from PySide6.QtCore import QTimerEvent
 from OpenGL.GL import *
 
 from baseapp import BaseApplication
-from shader import *
-from program import *
+from py3gl4.shader import *
+from py3gl4.program import *
+from py3gl4.vertexarrayobject import VertexArrayObject
 
 
 # implement tessellation
@@ -17,7 +18,7 @@ from program import *
 class GLWidget(QOpenGLWidget):
 
     vs_source = """
-    #version 410 core
+    #version 430 core
     void main(void)
     {
         const vec4 vertices[] = vec4[](vec4(0.25, -0.25, 0.5, 1.0),
@@ -28,7 +29,7 @@ class GLWidget(QOpenGLWidget):
     """
 
     tcs_source = """
-    #version 410 core
+    #version 430 core
     layout(vertices = 3) out;
     void main(void)
     {
@@ -44,7 +45,7 @@ class GLWidget(QOpenGLWidget):
     """
 
     tes_source = """
-    #version 410 core
+    #version 430 core
     layout(triangles, equal_spacing, cw) in;
     void main(void)
     {
@@ -55,7 +56,7 @@ class GLWidget(QOpenGLWidget):
     """
 
     fs_source = """
-    #version 410 core
+    #version 430 core
     out vec4 color;
     void main(void)
     {
@@ -77,21 +78,23 @@ class GLWidget(QOpenGLWidget):
         fs = FragmentShader(GLWidget.fs_source)
         self.program = Program([vs, tcs, tes,fs])
 
-        vao = glGenVertexArrays(1)
-        glBindVertexArray(vao)
+        self.vao = VertexArrayObject()
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
     def paintGL(self) -> None:
         green = np.array([0.0, 0.25, 0.0, 1.0], 'f')
         glClearBufferfv(GL_COLOR, 0, green)
 
-        self.program.useProgram()
+        self.program.use()
+        
+        self.vao.bind()
         glDrawArrays(GL_PATCHES, 0, 3)
+        self.vao.unbind()
 
 
 def test() -> None:
     """Run GLWidget test"""
-    app = BaseApplication(sys.argv)
+    app = BaseApplication(sys.argv, major=3, minor=3)
     widget = GLWidget()
     widget.show()
     sys.exit(app.exec())
