@@ -6,7 +6,7 @@ from PySide6.QtGui import QIcon, QAction, QKeySequence
 from PySide6.QtCore import *
 
 from baseapp import BaseApplication
-from glwidget import GLWidget
+from gltessellationwidget import GLTessellationWidget
 from glcubewidget import GLCubeWidget
 from glfractalwidget import GLFractalWidget
 from about import AboutDialog
@@ -19,10 +19,10 @@ class MainDockWindow(QMainWindow):
         self.icons_path = os.path.abspath(
             os.path.dirname(__file__)) + '/images/'
         self.filters = "Any File (*)"
-        self.gl_widget = GLWidget()
+        self.tess_widget = GLTessellationWidget()
         self.cube_widget = GLCubeWidget()
         self.fractal_widget = GLFractalWidget()
-        self.gl_demos = {"Cube": self.cube_widget, "Tessellation": self.gl_widget,
+        self.gl_demos = {"Cube": self.cube_widget, "Tessellation": self.tess_widget,
                          "Fractal": self.fractal_widget}
         self.create_ui()
 
@@ -162,7 +162,7 @@ class MainDockWindow(QMainWindow):
 def test() -> None:
     """Run MainWindow test"""
     app = BaseApplication(sys.argv)
-    mainwindow = MainDockWindow()
+    mainwindow = MainDockWindow(app)
     mainwindow.showMaximized()
     sys.exit(app.exec())
 

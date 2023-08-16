@@ -1,133 +1,155 @@
+# refer to https://github.com/denisenkom/mandelbrot-pyopengl/
+# refer to https://github.com/jakubcerveny/gl-compute
 import sys
 
 import numpy as np
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
-from PySide6.QtCore import QTimerEvent
+from PySide6.QtCore import QTimerEvent, QPoint, Qt
+from PySide6.QtGui import QCloseEvent, QSurfaceFormat, QMouseEvent, QWheelEvent
 from OpenGL.GL import *
+import imgui
 
-from baseapp import BaseApplication
-from py3gl4.shader import VertexShader, FragmentShader
-from py3gl4.program import Program, Uniform, VertexAttribute
+from py3gl4.program import Program
+from py3gl4.shader import VertexShader, FragmentShader, ComputeShader
 from py3gl4.vertexarrayobject import VertexArrayObject
-from py3gl4.buffer import VertexBufferObject
+from py3gl4.texture import Texture2D
+from qtimgui.pyside6 import PySide6Renderer
+from baseapp import BaseApplication
 
 
-
-# implement fractal - mandelbrot set
-# atapt from https://github.com/denisenkom/mandelbrot-pyopengl/blob/master/mandelbrot.py
 class GLFractalWidget(QOpenGLWidget):
-
-    vs_source = """
-    #version 430 core
-    layout(location = 0) in vec3 vertexPosition_modelspace;
-    out vec2 fragmentCoord;
-    void main(){
-        gl_Position = vec4(vertexPosition_modelspace, 1);
-        fragmentCoord = vec2(vertexPosition_modelspace.x, vertexPosition_modelspace.y);
-    }
-    """
-
-    fs_source = """
-    #version 430 core
-    in vec2 fragmentCoord;
-    out vec3 color;
-    uniform dmat3 transform;
-    uniform int max_iters = 1000;
-    vec3 hsv2rgb(vec3 c)
-    {
-        vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-        vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-        return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
-    }
-    vec3 map_color(int i, float r, float c) {
-        float di = i;
-        float zn = sqrt(r + c);
-        float hue = (di + 1 - log(log2(abs(zn))))/max_iters;
-        return hsv2rgb(vec3(hue, 0.8, 1));
-    }
-    void main(){
-        dvec3 pointCoord = dvec3(fragmentCoord.xy, 1);
-        pointCoord *= transform;
-        double cx = pointCoord.x;
-        double cy = pointCoord.y;
-        int iter = 0;
-        double zx = 0;
-        double zy = 0;
-        while (iter < max_iters) {
-            double nzx = zx * zx - zy * zy + cx;
-            double nzy = 2 * zx * zy + cy;
-            zx = nzx;
-            zy = nzy;
-            if (zx*zx + zy*zy > 4.0) {
-                break;
-            }
-            iter += 1;
-        }
-        if (iter == max_iters) {
-            color = vec3(0,0,0);
-        } else {
-            color = map_color(iter, float(zx*zx), float(zy*zy));
-        }
-    }
-    """
-
     def __init__(self) -> None:
         super().__init__()
         self.startTimer(20)
-        self.program = None
+        self.tex = None
+        self.size_changed = False
+        self.scale = 0.0
+        self.panX = 0.0
+        self.panY = 0.0
+        self.lastPos = QPoint()
+        self.centerPos = QPoint()
+        self.max_iter = 100
 
     def timerEvent(self, event: QTimerEvent) -> None:
         self.update()
 
     def initializeGL(self) -> None:
-        self.aspect = 1.0 * self.width() / self.height()
-        vertex_shader = VertexShader(GLFractalWidget.vs_source)
-        fragment_shader = FragmentShader(GLFractalWidget.fs_source)
+        # initialize opengl pipeline
+        vertex_shader = VertexShader(None, "shaders/fractal.vert")
+        fragment_shader = FragmentShader(None, "shaders/fractal.frag")
         self.program = Program([vertex_shader, fragment_shader])
+        vertex_shader.delete()
+        fragment_shader.delete()
 
-        # setup vertex attributes and uniforms based on shader code
-        self.program.addVertexAttribute(VertexAttribute("vertexPosition_modelspace", 0, 3, GL_DOUBLE, GL_FALSE, 0, 0))
-        self.program.addUniform(Uniform('transform', GL_DOUBLE_MAT3))
-        self.program.addUniform(Uniform('max_iters', GL_INT))
+        compute_shader = ComputeShader(None, "shaders/fractal.comp")
+        self.compute_program = Program([compute_shader])
+        compute_shader.delete()
 
-        self.vert_values = np.array([-1, -1 * self.aspect, 0,
-                                     1, -1 * self.aspect, 0,
-                                     -1, 1 * self.aspect, 0,
-                                     -1, 1 * self.aspect, 0,
-                                     1, -1 * self.aspect, 0,
-                                     1, 1 * self.aspect, 0,
-                                     ], dtype='float64')
-
-        # creating vertex array
+        # initialize vao
         self.vao = VertexArrayObject()
-        vbo = VertexBufferObject()
-        self.vao.setVBOVertexAttributes(vbo,self.vert_values, self.program)
-        self.state = {
-            'zoom': 1,
-            'pos_x': -0.7600189058857209,
-            'pos_y': 0.0799516080512771,
-            'max_iters': 100,
-        }
+
+        # initialize imgui
+        imgui.create_context()
+        self.impl = PySide6Renderer(self)
 
     def paintGL(self) -> None:
-        glClearColor(0, 0, 0, 0)
-        glClear(GL_COLOR_BUFFER_BIT)
-        self.program.use()
+        self.compute_program.use()
+        loc = glGetUniformLocation(self.compute_program.program_id, "center")
+        glUniform2f(loc, self.panX, self.panY)
+        loc = glGetUniformLocation(self.compute_program.program_id, "scale")
+        glUniform1f(loc, self.scale)
+        loc = glGetUniformLocation(self.compute_program.program_id, "max_iter")
+        glUniform1i(loc, self.max_iter)
+        lsize = np.zeros(3, dtype=np.int32)
+        glGetProgramiv(self.compute_program.program_id,
+                       GL_COMPUTE_WORK_GROUP_SIZE, lsize)
+        ngroups = [0] * 3
+        ngroups[0] = int((self.width() + lsize[0]-1) / lsize[0])
+        ngroups[1] = int((self.height() + lsize[1]-1) / lsize[1])
+        ngroups[2] = 1
+        glDispatchCompute(ngroups[0], ngroups[1], ngroups[2])
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
 
-        zoom = self.state['zoom']
-        pos_x = self.state['pos_x']
-        pos_y = self.state['pos_y']
-        self.program.uniforms['transform'].setDMat3(np.array([self.aspect * zoom, 0, pos_x, 0, 1 * zoom, pos_y, 0, 0, 1 * zoom], dtype='float64'))
-        iters = int(self.state['max_iters'])
-        self.program.uniforms['max_iters'].setInt(iters)
+        self.program.use()
+        loc = glGetUniformLocation(self.program.program_id, "u_Texture")
+        glUniform1i(loc, 0)
+        self.tex.bind(0)
 
         self.vao.bind()
-        glDrawArrays(GL_TRIANGLES, 0, int(len(self.vert_values) / 3))
-        self.vao.unbind()
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4)
 
-    def resizeGL(self, width: int, height: int) -> None:
-        self.aspect = 1.0 * self.width() / self.height()
-        self.update()
+        # define imgui elements
+        self.impl.process_inputs()
+        imgui.new_frame()
+
+        imgui.set_next_window_position(1, 1, condition=imgui.FIRST_USE_EVER)
+        imgui.set_next_window_size(500, 180, condition=imgui.FIRST_USE_EVER)
+        imgui.begin("Settings")
+
+        imgui.text("Press the left mouse button and move to pan")
+        imgui.text("Press the right mouse button and move to zoom")
+        imgui.text("Use the mouse wheel to zoom")
+        changed, iter = imgui.slider_int(
+            "Maximum Iterations", self.max_iter, 50, 1000)
+        self.max_iter = iter
+        imgui.end()
+
+        # render imgui
+        imgui.render()
+        self.impl.render(imgui.get_draw_data())
+
+    def resizeGL(self, w: int, h: int) -> None:
+        self.makeCurrent()
+        if self.tex is not None:
+            self.tex.delete()
+        self.tex = Texture2D(1, GL_RGBA32F, w, h)
+        self.tex.bingImage(0, 0, GL_WRITE_ONLY)
+        glViewport(0, 0, w, h)
+        if not self.size_changed:
+            self.panX = w * 0.75
+            self.panY = h * 0.5
+            self.scale = 2.0 / float(h)
+            self.size_changed = True
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        self.lastPos = event.position()
+        self.centerPos = QPoint(
+            self.lastPos.x(), self.height() - self.lastPos.y())
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if imgui.is_any_item_active():
+            return
+
+        deltaX = event.position().x() - self.lastPos.x()
+        deltaY = event.position().y() - self.lastPos.y()
+        button = event.buttons()
+        if button & Qt.RightButton:
+            self.zoom(float(deltaY/2))
+        elif button & Qt.LeftButton:
+            self.panX += deltaX
+            self.panY -= deltaY
+        self.lastPos = event.position()
+
+    def zoom(self, delta: float) -> None:
+        cx = self.scale * (self.centerPos.x() - self.panX)
+        cy = self.scale * (self.centerPos.y() - self.panY)
+        self.scale *= pow(1.01, delta)
+        self.panX = (self.scale * self.centerPos.x() - cx) / self.scale
+        self.panY = (self.scale * self.centerPos.y() - cy) / self.scale
+
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        self.centerPos = QPoint(event.pixelDelta().x(),
+                                self.height() - event.pixelDelta().y())
+        self.zoom(-float(event.angleDelta().y()) / 30.0)
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        self.makeCurrent()
+        self.vao.delete()
+        self.program.delete()
+        self.compute_program.delete()
+        if self.tex is not None:
+            self.tex.delete()
+        return super().closeEvent(event)
 
 
 def test():

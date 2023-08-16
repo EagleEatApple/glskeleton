@@ -24,7 +24,7 @@ class AboutDialog(QDialog):
         self.gl_text_edit = QPlainTextEdit()
         self.gl_text_edit.setMinimumWidth(400)
         self.gl_text_edit.setReadOnly(True)
-        self.gl_text_edit.setPlainText(app.system_info)
+        self.gl_text_edit.setPlainText(app.opengl_info)
         self.hlayout.addWidget(self.gl_image)
         self.hlayout.addWidget(self.gl_text_edit)
 

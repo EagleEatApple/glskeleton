@@ -1,278 +1,237 @@
-import sys
-import math
+# refer to https://github.com/totex/PyOpenGL_season_02/blob/master/video_15_framebuffer_objects_p1.py
 
-from numpy import array, dot, eye, float64, ndarray, zeros, float32, uint32
+import sys
+import time
+
+import numpy as np
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from PySide6.QtCore import QTimerEvent
-import OpenGL.GL as GL
+from PySide6.QtGui import QCloseEvent, QSurfaceFormat
+from OpenGL.GL import *
+import glm
 
+from py3gl4.program import Program
+from py3gl4.shader import VertexShader, FragmentShader
+from py3gl4.vertexarrayobject import VertexArrayObject, VertexAttribute
+from py3gl4.vertexbufferobject import VertexBufferObject
+from py3gl4.elementbufferobject import ElementBufferObject
+from py3gl4.uniform import Uniform
+from py3gl4.texture import Texture2D
+from py3gl4.framebuffer import Framebuffer
+from py3gl4.renderbuffer import Renderbuffer
 from baseapp import BaseApplication
-from py3gl4.shader import *
-from py3gl4.program import Program, Uniform, VertexAttribute
-from py3gl4.vertexarrayobject import VertexArrayObject
-from py3gl4.buffer import VertexBufferObject, ElementBufferObject
 
 
-# draw a cube on the screen
-# adapt from https://github.com/pygame/pygame/blob/main/examples/glcube.py
+vertex_shader_code = """
+#version 460 core
+in layout(location = 0) vec3 position;
+in layout(location = 1) vec2 textCoords;
+uniform mat4 vp;
+uniform mat4 model;
+out vec2 outText;
+void main()
+{
+    gl_Position =  vp * model * vec4(position, 1.0f);
+    outText = textCoords;
+}
+"""
+
+fragment_shader_code = """
+#version 460 core
+in vec2 outText;
+out vec4 outColor;
+uniform sampler2D renderedTexture;
+void main()
+{
+    outColor = texture(renderedTexture, outText);
+}
+"""
 
 
-class Rotation:
-    """
-    Data class that stores rotation angles in three axes.
-    """
-
-    def __init__(self) -> None:
-        self.theta: float = 20.0
-        self.phi: float = 40.0
-        self.psi: float = 25.0
-
-
-# implement tessellation
 class GLCubeWidget(QOpenGLWidget):
     def __init__(self) -> None:
         super().__init__()
         self.startTimer(20)
-
-    def translate(self, matrix: ndarray, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> ndarray:
-        """
-        Translate (move) a matrix in the x, y and z axes.
-        :param matrix: Matrix to translate.
-        :param x: direction and magnitude to translate in x axis. Defaults to 0.
-        :param y: direction and magnitude to translate in y axis. Defaults to 0.
-        :param z: direction and magnitude to translate in z axis. Defaults to 0.
-        :return: The translated matrix.
-        """
-        translation_matrix = array(
-            [
-                [1.0, 0.0, 0.0, x],
-                [0.0, 1.0, 0.0, y],
-                [0.0, 0.0, 1.0, z],
-                [0.0, 0.0, 0.0, 1.0],
-            ],
-            dtype=matrix.dtype,
-        ).T
-        matrix[...] = dot(matrix, translation_matrix)
-        return matrix
-
-    def frustum(self, left: float, right: float, bottom: float, top: float, znear: float, zfar: float) -> ndarray:
-        """
-        Build a perspective matrix from the clipping planes, or camera 'frustrum'
-        volume.
-        :param left: left position of the near clipping plane.
-        :param right: right position of the near clipping plane.
-        :param bottom: bottom position of the near clipping plane.
-        :param top: top position of the near clipping plane.
-        :param znear: z depth of the near clipping plane.
-        :param zfar: z depth of the far clipping plane.
-        :return: A perspective matrix.
-        """
-        perspective_matrix = zeros((4, 4), dtype=float32)
-        perspective_matrix[0, 0] = +2.0 * znear / (right - left)
-        perspective_matrix[2, 0] = (right + left) / (right - left)
-        perspective_matrix[1, 1] = +2.0 * znear / (top - bottom)
-        perspective_matrix[3, 1] = (top + bottom) / (top - bottom)
-        perspective_matrix[2, 2] = -(zfar + znear) / (zfar - znear)
-        perspective_matrix[3, 2] = -2.0 * znear * zfar / (zfar - znear)
-        perspective_matrix[2, 3] = -1.0
-        return perspective_matrix
-
-    def perspective(self, fovy: float, aspect: float, znear: float, zfar: float) -> ndarray:
-        """
-        Build a perspective matrix from field of view, aspect ratio and depth
-        planes.
-        :param fovy: the field of view angle in the y axis.
-        :param aspect: aspect ratio of our view port.
-        :param znear: z depth of the near clipping plane.
-        :param zfar: z depth of the far clipping plane.
-        :return: A perspective matrix.
-        """
-        h = math.tan(fovy / 360.0 * math.pi) * znear
-        w = h * aspect
-        return self.frustum(-w, w, -h, h, znear, zfar)
-
-    def rotate(self, matrix: ndarray, angle: float, x: float, y: float, z: float) -> ndarray:
-        """
-        Rotate a matrix around an axis.
-        :param matrix: The matrix to rotate.
-        :param angle: The angle to rotate by.
-        :param x: x of axis to rotate around.
-        :param y: y of axis to rotate around.
-        :param z: z of axis to rotate around.
-        :return: The rotated matrix
-        """
-        angle = math.pi * angle / 180
-        c, s = math.cos(angle), math.sin(angle)
-        n = math.sqrt(x * x + y * y + z * z)
-        x, y, z = x / n, y / n, z / n
-        cx, cy, cz = (1 - c) * x, (1 - c) * y, (1 - c) * z
-        rotation_matrix = array(
-            [
-                [cx * x + c, cy * x - z * s, cz * x + y * s, 0],
-                [cx * y + z * s, cy * y + c, cz * y - x * s, 0],
-                [cx * z - y * s, cy * z + x * s, cz * z + c, 0],
-                [0, 0, 0, 1],
-            ],
-            dtype=matrix.dtype,
-        ).T
-        matrix[...] = dot(matrix, rotation_matrix)
-        return matrix
+        self.cube_positions = [
+            (1.0, 1.0, 0.0), (0.0, 0.0, 0.0), (2.0, 0.0, 0.0)]
+        self.plane_position = glm.translate(
+            glm.mat4(1.0), glm.vec3(-3.0, 1.0, 0.0))
 
     def timerEvent(self, event: QTimerEvent) -> None:
         self.update()
 
     def initializeGL(self) -> None:
-        self.rotation = Rotation()
+        self.elapsedTime = 0.0
+        self.last_time = time.time()
+        self.aspect = float(self.size().width()) / self.size().height()
 
-        """
-        Initialise open GL in the 'modern' open GL style for open GL versions
-        greater than 3.1.
-        :param display_size: Size of the window/viewport.
-        """
-        # Create shaders
-        # --------------------------------------
-        vertex_code = """
-        #version 430 core
-        uniform mat4   model;
-        uniform mat4   view;
-        uniform mat4   projection;
-        uniform vec4   colour_mul;
-        uniform vec4   colour_add;
-        layout(location = 0)in vec3 vertex_position;
-        layout(location = 1)in vec4 vertex_colour;         // vertex colour in
+        # initialize opengl pipeline
+        vertex_shader = VertexShader(vertex_shader_code)
+        fragment_shader = FragmentShader(fragment_shader_code)
+        self.program = Program([vertex_shader, fragment_shader])
+        self.program.addUniform(Uniform("vp", GL_FLOAT_MAT4))
+        self.program.addUniform(Uniform("model", GL_FLOAT_MAT4))
+        vertex_shader.delete()
+        fragment_shader.delete
 
-        out vec4   vertex_color_out;            // vertex colour out
-        void main()
-        {
-            vertex_color_out = (colour_mul * vertex_colour) + colour_add;
-            gl_Position = projection * view * model * vec4(vertex_position, 1.0);
-        }
-        """
-        fragment_code = """
-        #version 430 core
-        in vec4 vertex_color_out;  // vertex colour from vertex shader
-        out vec4 fragColor;
-        void main()
-        {
-            fragColor = vertex_color_out;
-        }
-        """
-        vertex = VertexShader(vertex_code)
-        fragment = FragmentShader(fragment_code)
-        self.program = Program([vertex, fragment])
+        # initialize vao, vbo
+        cube = np.array([
+            -0.5, -0.5,  0.5, 0.0, 0.0,
+            0.5, -0.5,  0.5, 1.0, 0.0,
+            0.5,  0.5,  0.5, 1.0, 1.0,
+            -0.5,  0.5,  0.5, 0.0, 1.0,
+            -0.5, -0.5, -0.5, 0.0, 0.0,
+            0.5, -0.5, -0.5, 1.0, 0.0,
+            0.5,  0.5, -0.5, 1.0, 1.0,
+            -0.5,  0.5, -0.5, 0.0, 1.0,
+            0.5, -0.5, -0.5, 0.0, 0.0,
+            0.5,  0.5, -0.5, 1.0, 0.0,
+            0.5,  0.5,  0.5, 1.0, 1.0,
+            0.5, -0.5,  0.5, 0.0, 1.0,
+            -0.5,  0.5, -0.5, 0.0, 0.0,
+            -0.5, -0.5, -0.5, 1.0, 0.0,
+            -0.5, -0.5,  0.5, 1.0, 1.0,
+            -0.5,  0.5,  0.5, 0.0, 1.0,
+            -0.5, -0.5, -0.5, 0.0, 0.0,
+            0.5, -0.5, -0.5, 1.0, 0.0,
+            0.5, -0.5,  0.5, 1.0, 1.0,
+            -0.5, -0.5,  0.5, 0.0, 1.0,
+            0.5, 0.5, -0.5,  0.0, 0.0,
+            -0.5, 0.5, -0.5,  1.0, 0.0,
+            -0.5, 0.5,  0.5,  1.0, 1.0,
+            0.5, 0.5,  0.5,  0.0, 1.0
+        ], dtype=GLfloat)
 
-        # Create vertex buffers and shader constants
-        # ------------------------------------------
-        # Cube Data
-        vertices = zeros(
-            8, [("vertex_position", float32, 3), ("vertex_colour", float32, 4)]
-        )
-        vertices["vertex_position"] = [
-            [1, 1, 1],
-            [-1, 1, 1],
-            [-1, -1, 1],
-            [1, -1, 1],
-            [1, -1, -1],
-            [1, 1, -1],
-            [-1, 1, -1],
-            [-1, -1, -1],
-        ]
-        vertices["vertex_colour"] = [
-            [0, 1, 1, 1],
-            [0, 0, 1, 1],
-            [0, 0, 0, 1],
-            [0, 1, 0, 1],
-            [1, 1, 0, 1],
-            [1, 1, 1, 1],
-            [1, 0, 1, 1],
-            [1, 0, 0, 1],
-        ]
-        self.filled_cube_indices = array(
-            [0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5, 0, 5, 6,
-                0, 6, 1, 1, 6, 7, 1, 7, 2, 7, 4, 3, 7,
-                3, 2, 4, 7, 6, 4, 6, 5],
-            dtype=uint32,
-        )
-        self.outline_cube_indices = array(
-            [0, 1, 1, 2, 2, 3, 3, 0, 4, 7, 7, 6, 6,
-                5, 5, 4, 0, 5, 1, 6, 2, 7, 3, 4],
-            dtype=uint32,
-        )
+        self.cube_indices = np.array([
+            0,  1,  2,  2,  3,  0,
+            4,  5,  6,  6,  7,  4,
+            8,  9, 10, 10, 11,  8,
+            12, 13, 14, 14, 15, 12,
+            16, 17, 18, 18, 19, 16,
+            20, 21, 22, 22, 23, 20
+        ], dtype=GLuint)
 
-        # setup vertex attributes and uniforms based on shader code
-        stride = vertices.strides[0]
-        offset = 0
-        self.program.addVertexAttribute(VertexAttribute(
-            "vertex_position", 0, 3, GL.GL_FLOAT, False, stride, offset))
-        offset = vertices.dtype["vertex_position"].itemsize
-        self.program.addVertexAttribute(VertexAttribute(
-            "vertex_colour", 1, 3, GL.GL_FLOAT, False, stride, offset))
-        self.program.addUniform(Uniform("model", GL.GL_FLOAT_MAT4))
-        self.program.addUniform(Uniform("view",  GL.GL_FLOAT_MAT4))
-        self.program.addUniform(Uniform("projection", GL.GL_FLOAT_MAT4))
-        self.program.addUniform(Uniform("colour_mul",GL.GL_FLOAT_VEC4))
-        self.program.addUniform(Uniform("colour_add", GL.GL_FLOAT_VEC4))
+        plane = np.array([
+            -0.5, -0.5, 0.0, 0.0, 0.0,
+            2.0, -0.5, 0.0, 1.0, 0.0,
+            2.0,  1.0, 0.0, 1.0, 1.0,
+            -0.5,  1.0, 0.0, 0.0, 1.0
+        ], dtype=GLfloat)
 
-        self.vao = VertexArrayObject()
-        vertices_buffer = VertexBufferObject()
-        self.vao.setVBOVertexAttributes(vertices_buffer, vertices, self.program)
-        self.filled_buffer = ElementBufferObject()
-        self.filled_buffer.bind()
-        self.filled_buffer.setData(self.filled_cube_indices)
-        self.outline_buffer = ElementBufferObject()
-        self.outline_buffer.bind()
-        self.outline_buffer.setData(self.outline_cube_indices)
+        self.plane_indices = np.array([
+            0, 1, 2, 2, 3, 0
+        ], dtype=GLuint)
 
-        # Set GL drawing data
-        # -------------------
-        GL.glClearColor(0, 0, 0, 0)
-        GL.glPolygonOffset(1, 1)
-        GL.glEnable(GL.GL_LINE_SMOOTH)
-        GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
-        GL.glDepthFunc(GL.GL_LESS)
-        GL.glHint(GL.GL_LINE_SMOOTH_HINT, GL.GL_NICEST)
-        GL.glLineWidth(1.0)
+        attribute_position = VertexAttribute(
+            "position", 0, 3, GL_FLOAT, False, 0)
+        attribute_textCoords = VertexAttribute(
+            "textCoords", 1, 2, GL_FLOAT, False, 3 * sizeof(GLfloat))
+
+        self.cube_vao = VertexArrayObject()
+        self.cube_vbo = VertexBufferObject(cube)
+        self.cube_ebo = ElementBufferObject(self.cube_indices)
+        self.cube_vao.setVertexBuffer(self.cube_vbo, 0, 0, 5 * sizeof(GLfloat))
+        self.cube_vao.setVertexAttribute(0, attribute_position)
+        self.cube_vao.setVertexAttribute(0, attribute_textCoords)
+        self.cube_vao.setElementBuffer(self.cube_ebo)
+        self.cube_tex = Texture2D(file_path="textures/crate.jpg")
+
+        self.plane_vao = VertexArrayObject()
+        self.plane_vbo = VertexBufferObject(plane)
+        self.plane_ebo = ElementBufferObject(self.plane_indices)
+        self.plane_vao.setVertexBuffer(
+            self.plane_vbo, 0, 0, 5 * sizeof(GLfloat))
+        self.plane_vao.setVertexAttribute(0, attribute_position)
+        self.plane_vao.setVertexAttribute(0, attribute_textCoords)
+        self.plane_vao.setElementBuffer(self.plane_ebo)
+        self.plane_tex = Texture2D(1, GL_RGBA8, self.width(), self.height())
+        self.plane_tex.SetFiltering(GL_LINEAR, GL_LINEAR)
+        self.plane_tex.setWrapMode(GL_REPEAT, GL_REPEAT)
+        self.rbo = Renderbuffer(GL_DEPTH24_STENCIL8, self.width(), self.height())
+        self.fbo = Framebuffer()
+        self.fbo.attachTexture2D(GL_COLOR_ATTACHMENT0, self.plane_tex, 0)
+        self.fbo.attachRenderbuffer(
+            GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, self.rbo)
+
+        self.view = glm.translate(glm.mat4(1.0), glm.vec3(0.0, 0.0, -5.0))
+
+    def drawCube(self) -> None:
+        self.cube_vao.bind()
+        self.cube_tex.bind(0)
+        for i in range(len(self.cube_positions)):
+            model = glm.translate(
+                glm.mat4(1.0), glm.vec3(self.cube_positions[i]))
+            if i == 0:
+                pos = self.cube_positions[i]
+                pos = glm.rotateY(pos, -self.elapsedTime * 2)
+                model = glm.translate(glm.mat4(1.0), pos)
+                model = glm.rotate(model, -self.elapsedTime *
+                                   2, glm.vec3(0.0, 1.0, 0.0))
+                self.program.uniforms["model"].setMat4(glm.value_ptr(model))
+            elif i == 1:
+                self.program.uniforms["model"].setMat4(glm.value_ptr(model))
+            else:
+                self.program.uniforms["model"].setMat4(glm.value_ptr(model))
+            glDrawElements(GL_TRIANGLES, len(
+                self.cube_indices), GL_UNSIGNED_INT, None)
+        self.cube_vao.unbind()
+        self.cube_tex.unbind(0)
 
     def paintGL(self) -> None:
-        GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
-        GL.glEnable(GL.GL_DEPTH_TEST)
+        self.deltaTime = time.time() - self.last_time
+        self.elapsedTime += self.deltaTime
+        self.last_time = time.time()
+
         self.program.use()
-        
-        view = self.translate(eye(4), z=-6)
-        self.program.uniforms["view"].setMat4(view)
-        projection = self.perspective(
-            45.0, self.width() / float(self.height()), 2.0, 300.0)
-        self.program.uniforms["projection"].setMat4(projection)
+        self.projection = glm.perspective(
+            glm.radians(45.0), self.aspect, 0.1, 100.0)
+        self.vp = self.projection * self.view
+        self.program.uniforms["vp"].setMat4(glm.value_ptr(self.vp))
 
-        # Rotate cube
-        self.rotation.theta += 1.0  # degrees
-        self.rotation.phi += 1.0  # degrees
-        self.rotation.psi += 1.0  # degrees
-        model = eye(4, dtype=float32)
-        self.rotate(model, self.rotation.theta, 0, 0, 1)
-        self.rotate(model, self.rotation.phi, 0, 1, 0)
-        self.rotate(model, self.rotation.psi, 1, 0, 0)
-        self.program.uniforms["model"].setMat4(model)
+        # draw the cube to the texture in the custom frame buffer
+        self.fbo.bind()
+        glClearColor(0.0, 0.0, 0.0, 1.0)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        glEnable(GL_DEPTH_TEST)
+        self.drawCube()
 
-        self.vao.bind()
-        # Filled cube
-        GL.glEnable(GL.GL_POLYGON_OFFSET_FILL)
-        GL.glDisable(GL.GL_BLEND)
-        self.program.uniforms["colour_mul"].setVec4(1, 1, 1, 1)
-        self.program.uniforms["colour_add"].setVec4(0, 0, 0, 0.0)
-        self.filled_buffer.bind()
-        GL.glDrawElements(GL.GL_TRIANGLES, len(
-            self.filled_cube_indices), GL.GL_UNSIGNED_INT, None)
+        # now, back to draw to the default frame buffer
+        glBindFramebuffer(GL_FRAMEBUFFER, self.defaultFramebufferObject())
 
-        # Outlined cube
-        GL.glDisable(GL.GL_POLYGON_OFFSET_FILL)
-        GL.glEnable(GL.GL_BLEND)
-        self.program.uniforms["colour_mul"].setVec4(0, 0, 0, 0.0)
-        self.program.uniforms["colour_add"].setVec4(1, 1, 1, 1.0)
-        self.outline_buffer.bind()
-        GL.glDrawElements(GL.GL_LINES, len(
-            self.outline_cube_indices), GL.GL_UNSIGNED_INT, None)
-        self.vao.unbind()
+        # draw the plane on the screend, the contents of the plane are from the texture of above frame buffer
+        glClearColor(0.9, 0.9, 0.9, 1.0)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        self.plane_tex.bind(0)
+        self.plane_vao.bind()
+        self.program.uniforms["model"].setMat4(
+            glm.value_ptr(self.plane_position))
+        glDrawElements(GL_TRIANGLES, len(
+            self.plane_indices), GL_UNSIGNED_INT, None)
+        self.plane_vao.unbind()
+        self.plane_tex.unbind(0)
+
+        # draw the cube on the screend
+        self.drawCube()
+
+    def resizeGL(self, w: int, h: int) -> None:
+        self.makeCurrent()
+        self.aspect = float(w) / h
+        glViewport(0, 0, w, h)
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        self.makeCurrent()
+        self.program.delete()
+        self.cube_vao.delete()
+        self.cube_ebo.delete()
+        self.cube_vbo.delete()
+        self.cube_tex.delete()
+        self.plane_vao.delete()
+        self.plane_vbo.delete()
+        self.plane_ebo.delete()
+        self.plane_tex.delete()
+        self.rbo.delete()
+        self.fbo.delete()
+        return super().closeEvent(event)
 
 
 def test() -> None:

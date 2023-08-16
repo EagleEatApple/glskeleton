@@ -5,13 +5,13 @@ import numpy as np
 
 
 class Uniform:
-    def __init__(self, name: str, type: GLenum):
+    def __init__(self, name: str, type: GLenum) -> None:
         self.name = name
-        self.location = 0
+        self.location: int = 0
         self.type = type
 
-    def setLocation(self, program_name:int):
-        location = glGetUniformLocation(program_name, self.name)
+    def getLocation(self, program_id: int) -> None:
+        location = glGetUniformLocation(program_id, self.name)
         self.location = location
 
     def setBool(self, value: bool) -> None:
@@ -41,14 +41,17 @@ class Uniform:
     def setVec4(self, x: float, y: float, z: float, w: float) -> None:
         glUniform4f(self.location, x, y, z, w)
 
-    def setMat2(self, mat: np.ndarray):
+    def setMat2(self, mat: np.ndarray) -> None:
         glUniformMatrix2fv(self.location, 1, GL_FALSE, mat)
 
-    def setMat3(self, mat: np.ndarray):
+    def setMat3(self, mat: np.ndarray) -> None:
         glUniformMatrix3fv(self.location, 1, GL_FALSE, mat)
 
-    def setMat4(self, mat: np.ndarray):
+    def setMat4(self, mat: np.ndarray) -> None:
         glUniformMatrix4fv(self.location, 1, GL_FALSE, mat)
 
-    def setDMat3(self, mat: np.ndarray):
+    def setDMat3(self, mat: np.ndarray) -> None:
         glUniformMatrix3dv(self.location, 1, GL_FALSE, mat)
+
+    def setFloatList(self, value:np.ndarray)-> None:
+        glUniform1fv(self.location, value.size, value)

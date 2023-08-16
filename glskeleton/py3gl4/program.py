@@ -2,46 +2,44 @@
 # refer to https://www.khronos.org/opengl/wiki/Shader_Compilation
 
 from OpenGL.GL import glCreateProgram, glAttachShader, glLinkProgram, \
-    glGetProgramiv, glGetProgramInfoLog, glDeleteProgram, glDeleteShader, \
-    glUseProgram, GL_LINK_STATUS, GL_ACTIVE_UNIFORMS, glGetActiveUniform
+    glGetProgramiv, glGetProgramInfoLog, glDeleteProgram, glUseProgram, \
+    GL_LINK_STATUS
 
-from py3gl4.object import OpenGLObject
 from py3gl4.shader import Shader
-from py3gl4.vertexattribute import VertexAttribute
+from py3gl4.vertexarrayobject import VertexAttribute
 from py3gl4.uniform import Uniform
 
 
-class Program(OpenGLObject):
+class Program:
     def __init__(self, shaders: list[Shader]) -> None:
-        self.name = glCreateProgram()
-        self.attributes:dict[str, VertexAttribute] = {}
-        self.uniforms:dict[str, Uniform] = {}
-        if self.name == 0:
+        self.program_id = glCreateProgram()
+        self.attributes: dict[str, VertexAttribute] = {}
+        self.uniforms: dict[str, Uniform] = {}
+        if self.program_id == 0:
             raise ValueError(
-                "glCreateProgram failed to create an empty  program object")
-
+                "glCreateProgram failed to create a valid  program object")
         for shader in shaders:
-            glAttachShader(self.name, shader.name)
-
-        glLinkProgram(self.name)
-        result = glGetProgramiv(self.name, GL_LINK_STATUS)
+            glAttachShader(self.program_id, shader.shader_id)
+        glLinkProgram(self.program_id)
+        result = glGetProgramiv(self.program_id, GL_LINK_STATUS)
         if not result:
-            error = glGetProgramInfoLog(self.name)
+            error = glGetProgramInfoLog(self.program_id)
             # free resources
-            glDeleteProgram(self.name)
+            self.delete()
             raise RuntimeError(
                 "glLinkProgram failed to link (%s): %s", result, error)
-        # free resources
-        for shader in shaders:
-            glDeleteShader(shader.name)
 
     def use(self) -> None:
-        glUseProgram(self.name)
+        glUseProgram(self.program_id)
 
-    def addVertexAttribute(self, attribute:VertexAttribute):
+    def addVertexAttribute(self, attribute: VertexAttribute) -> None:
         self.attributes[attribute.name] = attribute
 
-    def addUniform(self, uniform:Uniform):
-        uniform.setLocation(self.name)
+    def addUniform(self, uniform: Uniform) -> None:
+        uniform.getLocation(self.program_id)
         self.uniforms[uniform.name] = uniform
+
+    def delete(self) -> None:
+        if self.program_id > -1:
+            glDeleteProgram(self.program_id)
 
