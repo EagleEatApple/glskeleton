@@ -2,6 +2,8 @@
 GL Skeleton is a 3D OpenGL application template based on PySide6 and PyOpenGL.
 GL Skeleton requires at least python 3.9 and OpenGL 4.6, and runs on Windows and Linux.
 
+If you enjoy the repository, please give my repo a star ⭐ ⬆️. 
+
 ## Screenshot
 ![screenshot](./screenshot/cube.png)
 ![screenshot](./screenshot/tessellation.png)
@@ -21,7 +23,7 @@ GL Skeleton requires at least python 3.9 and OpenGL 4.6, and runs on Windows and
 - [x] Refactory py3gl4 to only support OpenGL 4.6, and includes major OpenGL objects
 ```python
 class Program:
-class class VertexShader(Shader):
+class VertexShader(Shader):
 class TessellationControlShader(Shader):
 class TessellationEvaluationShader(Shader):
 class GeometryShader(Shader):
