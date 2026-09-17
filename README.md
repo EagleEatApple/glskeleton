@@ -1,4 +1,7 @@
 # GL Skeleton
+
+[![CI](https://github.com/EagleEatApple/glskeleton/actions/workflows/ci.yml/badge.svg)](https://github.com/EagleEatApple/glskeleton/actions/workflows/ci.yml)
+
 GL Skeleton is a 3D OpenGL application template based on PySide6 and PyOpenGL.
 GL Skeleton requires at least python 3.9 and OpenGL 4.6, and runs on Windows and Linux.
 
