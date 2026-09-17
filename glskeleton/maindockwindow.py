@@ -1,15 +1,15 @@
 import os
 import sys
 
-from PySide6.QtWidgets import *
-from PySide6.QtGui import QIcon, QAction, QKeySequence
 from PySide6.QtCore import *
+from PySide6.QtGui import QAction, QIcon, QKeySequence
+from PySide6.QtWidgets import *
 
-from baseapp import BaseApplication
-from gltessellationwidget import GLTessellationWidget
-from glcubewidget import GLCubeWidget
-from glfractalwidget import GLFractalWidget
-from about import AboutDialog
+from .about import AboutDialog
+from .baseapp import BaseApplication
+from .glcubewidget import GLCubeWidget
+from .glfractalwidget import GLFractalWidget
+from .gltessellationwidget import GLTessellationWidget
 
 
 class MainDockWindow(QMainWindow):

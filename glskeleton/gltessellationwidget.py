@@ -3,23 +3,28 @@
 import sys
 import time
 
-import numpy as np
-from PySide6.QtOpenGLWidgets import QOpenGLWidget
-from PySide6.QtCore import QTimerEvent
-from PySide6.QtGui import QCloseEvent, QSurfaceFormat
-from OpenGL.GL import *
-import imgui
 import glm
+import imgui
+import numpy as np
+from OpenGL.GL import *
+from PySide6.QtCore import QTimerEvent
+from PySide6.QtGui import QCloseEvent
+from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-
-from py3gl4.program import Program
-from py3gl4.shader import VertexShader, FragmentShader, TessellationControlShader, TessellationEvaluationShader, GeometryShader
-from py3gl4.vertexarrayobject import VertexArrayObject, VertexAttribute
-from py3gl4.vertexbufferobject import VertexBufferObject
-from py3gl4.elementbufferobject import ElementBufferObject
-from py3gl4.uniform import Uniform
-from qtimgui.pyside6 import PySide6Renderer
-from baseapp import BaseApplication
+from .baseapp import BaseApplication
+from .py3gl4.elementbufferobject import ElementBufferObject
+from .py3gl4.program import Program
+from .py3gl4.shader import (
+    FragmentShader,
+    GeometryShader,
+    TessellationControlShader,
+    TessellationEvaluationShader,
+    VertexShader,
+)
+from .py3gl4.uniform import Uniform
+from .py3gl4.vertexarrayobject import VertexArrayObject, VertexAttribute
+from .py3gl4.vertexbufferobject import VertexBufferObject
+from .qtimgui.pyside6 import PySide6Renderer
 
 vertex_shader_code = """
 #version 460 core
@@ -38,25 +43,25 @@ tessellation_control_shader_code = """
 layout (vertices = 3) out;
 in VS_OUT
 {
-   vec3 Pos;
+    vec3 Pos;
 }vs_out[];
 out TC_OUT
 {
-  vec3 Pos;
+    vec3 Pos;
 }tc_out[];
 uniform int tessInner;
 uniform int tessOuter;
 void main(void)
 {
-   if (gl_InvocationID == 0)
-   {
-     gl_TessLevelInner[0] = tessInner;
-	 gl_TessLevelOuter[0] = tessOuter;
-	 gl_TessLevelOuter[1] = tessOuter;
-	 gl_TessLevelOuter[2] = tessOuter;
-   }
+    if (gl_InvocationID == 0)
+    {
+        gl_TessLevelInner[0] = tessInner;
+        gl_TessLevelOuter[0] = tessOuter;
+        gl_TessLevelOuter[1] = tessOuter;
+        gl_TessLevelOuter[2] = tessOuter;
+    }
 
-   tc_out[gl_InvocationID].Pos = vs_out[gl_InvocationID].Pos;
+    tc_out[gl_InvocationID].Pos = vs_out[gl_InvocationID].Pos;
 }
 """
 tessellation_evaluation_shader_code = """
@@ -64,25 +69,25 @@ tessellation_evaluation_shader_code = """
 layout (triangles, equal_spacing, cw) in;
 in TC_OUT
 {
-  vec3 Pos;
+    vec3 Pos;
 }tc_out[];
 out TE_OUT
 {
-  vec3 Pos;
-  vec3 PatchDistance;
+    vec3 Pos;
+    vec3 PatchDistance;
 }te_out;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 proj;
 void main(void)
 {
-   vec3 p0 = gl_TessCoord.x * tc_out[0].Pos;
-   vec3 p1 = gl_TessCoord.y * tc_out[1].Pos;
-   vec3 p2 = gl_TessCoord.z * tc_out[2].Pos;
-   te_out.PatchDistance = gl_TessCoord;
-   te_out.Pos = normalize(p0 + p1 + p2);
-   mat4 mvp = proj * view * model;
-   gl_Position = mvp * vec4(te_out.Pos, 1.0f);
+    vec3 p0 = gl_TessCoord.x * tc_out[0].Pos;
+    vec3 p1 = gl_TessCoord.y * tc_out[1].Pos;
+    vec3 p2 = gl_TessCoord.z * tc_out[2].Pos;
+    te_out.PatchDistance = gl_TessCoord;
+    te_out.Pos = normalize(p0 + p1 + p2);
+    mat4 mvp = proj * view * model;
+    gl_Position = mvp * vec4(te_out.Pos, 1.0f);
 }
 """
 
@@ -92,36 +97,36 @@ layout (triangles) in;
 layout (triangle_strip, max_vertices = 3) out;
 in TE_OUT
 {
-  vec3 Pos;
-  vec3 PatchDistance;
+    vec3 Pos;
+    vec3 PatchDistance;
 }te_out[3];
 out GE_OUT
 {
-  vec3 FacetNormal;
-  vec3 PatchDistance;
-  vec3 TriDistance;
+    vec3 FacetNormal;
+    vec3 PatchDistance;
+    vec3 TriDistance;
 }ge_out;
 uniform mat4 model;
 uniform mat4 view;
 void main(void)
 {
-   mat3 normal_mat = mat3(transpose(inverse(view * model) ) );
-   vec3 A = te_out[2].Pos - te_out[0].Pos;
-   vec3 B = te_out[1].Pos - te_out[0].Pos;
-   ge_out.FacetNormal = normal_mat * normalize(cross(A, B));
-   ge_out.PatchDistance = te_out[0].PatchDistance;
-   ge_out.TriDistance  = vec3(1, 0, 0);
-   gl_Position = gl_in[0].gl_Position;
-   EmitVertex();
-   ge_out.PatchDistance = te_out[1].PatchDistance;
-   ge_out.TriDistance  = vec3(0, 1, 0);
-   gl_Position = gl_in[1].gl_Position;
-   EmitVertex();
-   ge_out.PatchDistance = te_out[2].PatchDistance;
-   ge_out.TriDistance  = vec3(0, 0, 1);
-   gl_Position = gl_in[2].gl_Position;
-   EmitVertex();
-   EndPrimitive();
+    mat3 normal_mat = mat3(transpose(inverse(view * model) ) );
+    vec3 A = te_out[2].Pos - te_out[0].Pos;
+    vec3 B = te_out[1].Pos - te_out[0].Pos;
+    ge_out.FacetNormal = normal_mat * normalize(cross(A, B));
+    ge_out.PatchDistance = te_out[0].PatchDistance;
+    ge_out.TriDistance  = vec3(1, 0, 0);
+    gl_Position = gl_in[0].gl_Position;
+    EmitVertex();
+    ge_out.PatchDistance = te_out[1].PatchDistance;
+    ge_out.TriDistance  = vec3(0, 1, 0);
+    gl_Position = gl_in[1].gl_Position;
+    EmitVertex();
+    ge_out.PatchDistance = te_out[2].PatchDistance;
+    ge_out.TriDistance  = vec3(0, 0, 1);
+    gl_Position = gl_in[2].gl_Position;
+    EmitVertex();
+    EndPrimitive();
 }
 """
 
@@ -130,30 +135,30 @@ fragment_shader_code = """
 layout (location = 0) out vec4  FragColor;
 in GE_OUT
 {
-  vec3 FacetNormal;
-  vec3 PatchDistance;
-  vec3 TriDistance;
+    vec3 FacetNormal;
+    vec3 PatchDistance;
+    vec3 TriDistance;
 }ge_out;
 uniform vec3 lightDir;
 uniform vec4 diffuseMat;
 uniform vec4 ambientMat;
 float amplify(float d, float scale, float offset)
 {
-  d = scale * d + offset;
-  d = clamp(d, 0, 1);
-  d = 1 - exp2(-2 * d * d);
-  return d;
+    d = scale * d + offset;
+    d = clamp(d, 0, 1);
+    d = 1 - exp2(-2 * d * d);
+    return d;
 }
 void main(void)
 {
-  vec3 N = normalize(ge_out.FacetNormal);
-  vec3 L = lightDir;
-  float df = max(0.0f, dot(N, L) );
-  vec4 color = ambientMat + df * diffuseMat;// + pow(sp, 32) * diffuseMat;
-  float d1 = min(min(ge_out.TriDistance.x, ge_out.TriDistance.y), ge_out.TriDistance.z);
-  float d2 = min(min(ge_out.PatchDistance.x, ge_out.PatchDistance.y), ge_out.PatchDistance.z);
-  color = amplify(d1, 40, -0.5) * amplify(d2, 60, -0.5) * color;
-  FragColor = color;
+    vec3 N = normalize(ge_out.FacetNormal);
+    vec3 L = lightDir;
+    float df = max(0.0f, dot(N, L) );
+    vec4 color = ambientMat + df * diffuseMat;// + pow(sp, 32) * diffuseMat;
+    float d1 = min(min(ge_out.TriDistance.x, ge_out.TriDistance.y), ge_out.TriDistance.z);
+    float d2 = min(min(ge_out.PatchDistance.x, ge_out.PatchDistance.y), ge_out.PatchDistance.z);
+    color = amplify(d1, 40, -0.5) * amplify(d2, 60, -0.5) * color;
+    FragColor = color;
 }
 
 """
@@ -237,7 +242,7 @@ class GLTessellationWidget(QOpenGLWidget):
         3,  8, 7,
         4,  9, 8,
         5, 10, 9,
-        1, 6, 10            
+        1, 6, 10
         ], dtype=GLuint)
 
         attribute_position = VertexAttribute("Position", 0, 3, GL_FLOAT, False, 0)
@@ -277,7 +282,7 @@ class GLTessellationWidget(QOpenGLWidget):
         self.program.uniforms["view"].setMat4(glm.value_ptr(view))
         self.program.uniforms["proj"].setMat4(glm.value_ptr(proj))
 
-        self.vao.bind()        
+        self.vao.bind()
         glDrawElements(GL_PATCHES, self.indices.size, GL_UNSIGNED_INT,None)
 
         # define imgui elements
@@ -297,7 +302,7 @@ class GLTessellationWidget(QOpenGLWidget):
 
     def resizeGL(self, w: int, h: int) -> None:
         self.makeCurrent()
-        self.aspect = float(w) / h 
+        self.aspect = float(w) / h
         glViewport(0,0,w,h)
 
     def closeEvent(self, event: QCloseEvent) -> None:

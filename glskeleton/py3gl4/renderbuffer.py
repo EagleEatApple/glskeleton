@@ -1,8 +1,14 @@
 # refer to https://registry.khronos.org/OpenGL/specs/gl/glspec46.core.pdf
-from ctypes import c_uint, c_int
+from ctypes import c_int, c_uint
 
-from OpenGL.GL import glCreateRenderbuffers, glBindRenderbuffer, \
-    GL_RENDERBUFFER, glNamedRenderbufferStorage, glDeleteRenderbuffers, glIsRenderbuffer
+from OpenGL.GL import (
+    GL_RENDERBUFFER,
+    glBindRenderbuffer,
+    glCreateRenderbuffers,
+    glDeleteRenderbuffers,
+    glIsRenderbuffer,
+    glNamedRenderbufferStorage,
+)
 
 
 class Renderbuffer:

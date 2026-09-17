@@ -3,11 +3,21 @@
 import platform
 from ctypes import c_uint
 
-from OpenGL.GL import glCreateShader, glShaderSource, \
-    glCompileShader, glGetShaderiv, glGetShaderInfoLog, glDeleteShader, \
-    GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_COMPILE_STATUS, \
-    GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER, GL_GEOMETRY_SHADER, \
-    GL_COMPUTE_SHADER
+from OpenGL.GL import (
+    GL_COMPILE_STATUS,
+    GL_COMPUTE_SHADER,
+    GL_FRAGMENT_SHADER,
+    GL_GEOMETRY_SHADER,
+    GL_TESS_CONTROL_SHADER,
+    GL_TESS_EVALUATION_SHADER,
+    GL_VERTEX_SHADER,
+    glCompileShader,
+    glCreateShader,
+    glDeleteShader,
+    glGetShaderInfoLog,
+    glGetShaderiv,
+    glShaderSource,
+)
 
 
 class Shader:

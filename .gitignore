@@ -1,0 +1,34 @@
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# 构建产物
+build/
+dist/
+
+# 测试与类型检查缓存
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/launch.json
+*.swp
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 临时输出
+error.txt

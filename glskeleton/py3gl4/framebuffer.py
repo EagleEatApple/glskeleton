@@ -1,11 +1,18 @@
 # refer to https://registry.khronos.org/OpenGL/specs/gl/glspec46.core.pdf
-from ctypes import c_uint, c_int
+from ctypes import c_int, c_uint
 
-from OpenGL.GL import glCreateFramebuffers, glBindFramebuffer, GL_FRAMEBUFFER, glIsFramebuffer, \
-    glDeleteFramebuffers, glNamedFramebufferTexture, glNamedFramebufferRenderbuffer
+from OpenGL.GL import (
+    GL_FRAMEBUFFER,
+    glBindFramebuffer,
+    glCreateFramebuffers,
+    glDeleteFramebuffers,
+    glIsFramebuffer,
+    glNamedFramebufferRenderbuffer,
+    glNamedFramebufferTexture,
+)
 
-from py3gl4.texture import Texture2D
-from py3gl4.renderbuffer import Renderbuffer
+from .renderbuffer import Renderbuffer
+from .texture import Texture2D
 
 
 class Framebuffer:

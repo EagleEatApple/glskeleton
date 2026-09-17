@@ -1,6 +1,0 @@
-PySide6
-PyOpenGL
-numpy
-PyGLM
-Pillow
-imgui

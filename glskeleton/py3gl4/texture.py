@@ -1,12 +1,33 @@
 # refer to https://registry.khronos.org/OpenGL/specs/gl/glspec46.core.pdf
-from ctypes import c_uint, c_int
+from ctypes import c_int, c_uint
 from pathlib import Path
 
-from OpenGL.GL import glCreateTextures, glBindTextureUnit, glDeleteTextures, glIsTexture, \
-    GL_TEXTURE_2D, glTextureStorage2D, glTextureParameteri, GL_TEXTURE_MIN_FILTER, \
-    GL_TEXTURE_MAG_FILTER, GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, glBindImageTexture, \
-    GL_FALSE, GL_RGBA32F, GL_RED, GL_RGB, GL_RGBA, GL_LINEAR, GL_NEAREST, GL_REPEAT, \
-    glTextureSubImage2D, GL_UNSIGNED_BYTE, glGenerateTextureMipmap, GL_R32F, GL_RGB32F
+from OpenGL.GL import (
+    GL_FALSE,
+    GL_LINEAR,
+    GL_NEAREST,
+    GL_R32F,
+    GL_RED,
+    GL_REPEAT,
+    GL_RGB,
+    GL_RGB32F,
+    GL_RGBA,
+    GL_RGBA32F,
+    GL_TEXTURE_2D,
+    GL_TEXTURE_MAG_FILTER,
+    GL_TEXTURE_MIN_FILTER,
+    GL_TEXTURE_WRAP_S,
+    GL_TEXTURE_WRAP_T,
+    GL_UNSIGNED_BYTE,
+    glBindImageTexture,
+    glBindTextureUnit,
+    glCreateTextures,
+    glDeleteTextures,
+    glIsTexture,
+    glTextureParameteri,
+    glTextureStorage2D,
+    glTextureSubImage2D,
+)
 from PIL import Image
 
 
@@ -38,6 +59,7 @@ class Texture2D(Texture):
             glTextureStorage2D(self.tex_id, level, internalFormat, width, height)
         else:
             filename = Path(file_path)
+            # filename = "E:/glskeleton/glskeleton/textures/crate.jpg"
             # image = Image.open(filename).transpose(Image.FLIP_TOP_BOTTOM)
             image = Image.open(filename)
             if image is not None:

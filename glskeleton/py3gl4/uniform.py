@@ -1,7 +1,7 @@
 # refer to https://www.khronos.org/opengl/wiki/Uniform_(GLSL)
 
-from OpenGL.GL import *
 import numpy as np
+from OpenGL.GL import *
 
 
 class Uniform:

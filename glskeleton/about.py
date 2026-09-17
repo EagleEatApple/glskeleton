@@ -1,7 +1,15 @@
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QPlainTextEdit, QVBoxLayout, QHBoxLayout, QLabel
 from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QHBoxLayout,
+    QLabel,
+    QPlainTextEdit,
+    QVBoxLayout,
+)
 
-from baseapp import BaseApplication
+from .baseapp import BaseApplication
+
 
 # show OpenGL information
 class AboutDialog(QDialog):

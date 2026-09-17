@@ -6,9 +6,19 @@ try:
 except ImportError:
     print("PySide6 must be installed to run this application!")
     print("Please run:\npip install PySide6")
-from PySide6.QtGui import QSurfaceFormat, QOffscreenSurface, QOpenGLContext
+from PySide6.QtGui import QOffscreenSurface, QOpenGLContext, QSurfaceFormat
+
 try:
-    from OpenGL.GL import glGetString, GL_VERSION, GL_RENDERER, GL_VENDOR, GL_SHADING_LANGUAGE_VERSION, glGetInteger, GL_MAJOR_VERSION, GL_MINOR_VERSION
+    from OpenGL.GL import (
+        GL_MAJOR_VERSION,
+        GL_MINOR_VERSION,
+        GL_RENDERER,
+        GL_SHADING_LANGUAGE_VERSION,
+        GL_VENDOR,
+        GL_VERSION,
+        glGetInteger,
+        glGetString,
+    )
 except ImportError:
     print("PyOpenGL must be installed to run this application!")
     print("Please run:\npip install PyOpenGL PyOpenGL_accelerate")

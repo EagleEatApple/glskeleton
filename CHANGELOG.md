@@ -1,9 +1,14 @@
+### `2026-09-17`
+
+Migrate package management system to [uv](https://github.com/astral-sh/uv)
+
+
 ### `2023-08-16`
 
 Refactory py3gl4 to only support OpenGL 4.6, and includes major OpenGL objects
 ```python
 class Program:
-class class VertexShader(Shader):
+class VertexShader(Shader):
 class TessellationControlShader(Shader):
 class TessellationEvaluationShader(Shader):
 class GeometryShader(Shader):

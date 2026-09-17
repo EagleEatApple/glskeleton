@@ -1,17 +1,14 @@
-# -*- coding: utf-8 -*-
 # refer to https://github.com/pyimgui/pyimgui/tree/master/imgui/integrations
 # refer to https://github.com/seanchas116/qtimgui
 # refer to https://github.com/pedohorse/lifeblood/blob/dev/src/lifeblood_viewer/nodeeditor.py
 
-from __future__ import absolute_import
 
 import imgui
 from imgui.integrations.opengl import ProgrammablePipelineRenderer
-
+from PySide6.QtCore import QDateTime, QEvent, QObject, Qt
+from PySide6.QtGui import QCursor, QKeyEvent, QMouseEvent, QWheelEvent
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
-from PySide6.QtCore import QObject, QEvent, Qt, QDateTime
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QMouseEvent, QWheelEvent, QKeyEvent, QCursor
 
 
 class PySide6Renderer(QObject, ProgrammablePipelineRenderer):

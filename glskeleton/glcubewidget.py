@@ -3,24 +3,23 @@
 import sys
 import time
 
-import numpy as np
-from PySide6.QtOpenGLWidgets import QOpenGLWidget
-from PySide6.QtCore import QTimerEvent
-from PySide6.QtGui import QCloseEvent, QSurfaceFormat
-from OpenGL.GL import *
 import glm
+import numpy as np
+from OpenGL.GL import *
+from PySide6.QtCore import QTimerEvent
+from PySide6.QtGui import QCloseEvent
+from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-from py3gl4.program import Program
-from py3gl4.shader import VertexShader, FragmentShader
-from py3gl4.vertexarrayobject import VertexArrayObject, VertexAttribute
-from py3gl4.vertexbufferobject import VertexBufferObject
-from py3gl4.elementbufferobject import ElementBufferObject
-from py3gl4.uniform import Uniform
-from py3gl4.texture import Texture2D
-from py3gl4.framebuffer import Framebuffer
-from py3gl4.renderbuffer import Renderbuffer
-from baseapp import BaseApplication
-
+from .baseapp import BaseApplication
+from .py3gl4.elementbufferobject import ElementBufferObject
+from .py3gl4.framebuffer import Framebuffer
+from .py3gl4.program import Program
+from .py3gl4.renderbuffer import Renderbuffer
+from .py3gl4.shader import FragmentShader, VertexShader
+from .py3gl4.texture import Texture2D
+from .py3gl4.uniform import Uniform
+from .py3gl4.vertexarrayobject import VertexArrayObject, VertexAttribute
+from .py3gl4.vertexbufferobject import VertexBufferObject
 
 vertex_shader_code = """
 #version 460 core
@@ -65,6 +64,8 @@ class GLCubeWidget(QOpenGLWidget):
         self.last_time = time.time()
         self.aspect = float(self.size().width()) / self.size().height()
 
+        self.view = glm.translate(glm.mat4(1.0), glm.vec3(0.0, 0.0, -5.0))
+
         # initialize opengl pipeline
         vertex_shader = VertexShader(vertex_shader_code)
         fragment_shader = FragmentShader(fragment_shader_code)
@@ -72,7 +73,7 @@ class GLCubeWidget(QOpenGLWidget):
         self.program.addUniform(Uniform("vp", GL_FLOAT_MAT4))
         self.program.addUniform(Uniform("model", GL_FLOAT_MAT4))
         vertex_shader.delete()
-        fragment_shader.delete
+        fragment_shader.delete()
 
         # initialize vao, vbo
         cube = np.array([
@@ -134,7 +135,7 @@ class GLCubeWidget(QOpenGLWidget):
         self.cube_vao.setVertexAttribute(0, attribute_position)
         self.cube_vao.setVertexAttribute(0, attribute_textCoords)
         self.cube_vao.setElementBuffer(self.cube_ebo)
-        self.cube_tex = Texture2D(file_path="textures/crate.jpg")
+        self.cube_tex = Texture2D(file_path="glskeleton/textures/crate.jpg")
 
         self.plane_vao = VertexArrayObject()
         self.plane_vbo = VertexBufferObject(plane)
@@ -153,7 +154,7 @@ class GLCubeWidget(QOpenGLWidget):
         self.fbo.attachRenderbuffer(
             GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, self.rbo)
 
-        self.view = glm.translate(glm.mat4(1.0), glm.vec3(0.0, 0.0, -5.0))
+
 
     def drawCube(self) -> None:
         self.cube_vao.bind()

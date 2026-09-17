@@ -1,9 +1,16 @@
 # refer to https://registry.khronos.org/OpenGL/specs/gl/glspec46.core.pdf
 from ctypes import c_uint
 
-from OpenGL.GL import glCreateBuffers, glBindBuffer, GL_ARRAY_BUFFER, \
-    glNamedBufferStorage, GL_DYNAMIC_STORAGE_BIT, glIsBuffer, glDeleteBuffers
 import numpy as np
+from OpenGL.GL import (
+    GL_ARRAY_BUFFER,
+    GL_DYNAMIC_STORAGE_BIT,
+    glBindBuffer,
+    glCreateBuffers,
+    glDeleteBuffers,
+    glIsBuffer,
+    glNamedBufferStorage,
+)
 
 
 class VertexBufferObject:

@@ -1,0 +1,74 @@
+[project]
+name = "gl-skeleton"
+version = "0.1.0"
+description = "A 3D OpenGL application template based on PySide6 and PyOpenGL"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE.md"]
+requires-python = ">=3.9"
+# authors = [
+#     { name = "你的名字", email = "你的邮箱" },
+# ]
+keywords = ["opengl", "pyside6", "pyopengl", "3d", "graphics"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Graphics :: 3D Rendering",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+]
+
+dependencies = [
+    "PySide6>=6.5.2",
+    "PyOpenGL>=3.1.7",
+    "numpy>=1.25.0",
+    "PyGLM>=2.7.0",
+    "Pillow>=10.0.0",
+    "imgui>=2.0.0",
+]
+
+# [project.urls]
+# Homepage = "https://github.com/你的用户名/glskeleton"
+# Repository = "https://github.com/你的用户名/glskeleton"
+# Changelog = "https://github.com/你的用户名/glskeleton/blob/main/CHANGELOG.md"
+
+[project.scripts]
+glskeleton = "glskeleton.app:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B"]
+ignore = [
+    "E501",     # 行过长，ruff 已通过 line-length 处理
+    "F403",     # from OpenGL.GL import * 是 PyOpenGL 惯例
+    "F405",     # star import 导致的误报
+    "N802",     # Qt 覆写方法和 OpenGL 风格 API 用 camelCase
+    "N803",     # 参数名沿用 OpenGL 常量风格
+    "N806",     # 局部变量沿用 OpenGL 风格
+    "N812",     # import platform as localOS 是有意为之
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["glskeleton"]
+

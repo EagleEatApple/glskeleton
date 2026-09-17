@@ -1,9 +1,16 @@
 # refer to https://registry.khronos.org/OpenGL/specs/gl/glspec46.core.pdf
 from ctypes import c_uint
 
-from OpenGL.GL import glCreateBuffers, glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, \
-    glNamedBufferStorage, GL_DYNAMIC_STORAGE_BIT, glDeleteBuffers, glIsBuffer
 import numpy as np
+from OpenGL.GL import (
+    GL_DYNAMIC_STORAGE_BIT,
+    GL_ELEMENT_ARRAY_BUFFER,
+    glBindBuffer,
+    glCreateBuffers,
+    glDeleteBuffers,
+    glIsBuffer,
+    glNamedBufferStorage,
+)
 
 
 class ElementBufferObject:
@@ -12,7 +19,7 @@ class ElementBufferObject:
         glCreateBuffers(1, self.ebo_id)
         if data is not None:
             self.setData(data)
-            
+
     def bind(self) -> None:
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ebo_id)
 

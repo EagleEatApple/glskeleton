@@ -1,13 +1,20 @@
 # refert to https://www.khronos.org/opengl/wiki/GLSL_Object#Program_objects
 # refer to https://www.khronos.org/opengl/wiki/Shader_Compilation
 
-from OpenGL.GL import glCreateProgram, glAttachShader, glLinkProgram, \
-    glGetProgramiv, glGetProgramInfoLog, glDeleteProgram, glUseProgram, \
-    GL_LINK_STATUS
+from OpenGL.GL import (
+    GL_LINK_STATUS,
+    glAttachShader,
+    glCreateProgram,
+    glDeleteProgram,
+    glGetProgramInfoLog,
+    glGetProgramiv,
+    glLinkProgram,
+    glUseProgram,
+)
 
-from py3gl4.shader import Shader
-from py3gl4.vertexarrayobject import VertexAttribute
-from py3gl4.uniform import Uniform
+from .shader import Shader
+from .uniform import Uniform
+from .vertexarrayobject import VertexAttribute
 
 
 class Program:

@@ -2,19 +2,19 @@
 # refer to https://github.com/jakubcerveny/gl-compute
 import sys
 
-import numpy as np
-from PySide6.QtOpenGLWidgets import QOpenGLWidget
-from PySide6.QtCore import QTimerEvent, QPoint, Qt
-from PySide6.QtGui import QCloseEvent, QSurfaceFormat, QMouseEvent, QWheelEvent
-from OpenGL.GL import *
 import imgui
+import numpy as np
+from OpenGL.GL import *
+from PySide6.QtCore import QPoint, Qt, QTimerEvent
+from PySide6.QtGui import QCloseEvent, QMouseEvent, QWheelEvent
+from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-from py3gl4.program import Program
-from py3gl4.shader import VertexShader, FragmentShader, ComputeShader
-from py3gl4.vertexarrayobject import VertexArrayObject
-from py3gl4.texture import Texture2D
-from qtimgui.pyside6 import PySide6Renderer
-from baseapp import BaseApplication
+from .baseapp import BaseApplication
+from .py3gl4.program import Program
+from .py3gl4.shader import ComputeShader, FragmentShader, VertexShader
+from .py3gl4.texture import Texture2D
+from .py3gl4.vertexarrayobject import VertexArrayObject
+from .qtimgui.pyside6 import PySide6Renderer
 
 
 class GLFractalWidget(QOpenGLWidget):
@@ -35,13 +35,13 @@ class GLFractalWidget(QOpenGLWidget):
 
     def initializeGL(self) -> None:
         # initialize opengl pipeline
-        vertex_shader = VertexShader(None, "shaders/fractal.vert")
-        fragment_shader = FragmentShader(None, "shaders/fractal.frag")
+        vertex_shader = VertexShader(None, "glskeleton/shaders/fractal.vert")
+        fragment_shader = FragmentShader(None, "glskeleton/shaders/fractal.frag")
         self.program = Program([vertex_shader, fragment_shader])
         vertex_shader.delete()
         fragment_shader.delete()
 
-        compute_shader = ComputeShader(None, "shaders/fractal.comp")
+        compute_shader = ComputeShader(None, "glskeleton/shaders/fractal.comp")
         self.compute_program = Program([compute_shader])
         compute_shader.delete()
 

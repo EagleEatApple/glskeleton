@@ -2,12 +2,20 @@
 # Vertex array objects are container objects including references to buffer objects
 from ctypes import c_uint
 
-from OpenGL.GL import glCreateVertexArrays, glBindVertexArray, glDeleteVertexArrays, \
-    glVertexArrayElementBuffer, glVertexArrayVertexBuffer, glEnableVertexArrayAttrib, \
-    glVertexArrayAttribFormat, glVertexArrayAttribBinding, glIsVertexArray
+from OpenGL.GL import (
+    glBindVertexArray,
+    glCreateVertexArrays,
+    glDeleteVertexArrays,
+    glEnableVertexArrayAttrib,
+    glIsVertexArray,
+    glVertexArrayAttribBinding,
+    glVertexArrayAttribFormat,
+    glVertexArrayElementBuffer,
+    glVertexArrayVertexBuffer,
+)
 
-from py3gl4.vertexbufferobject import VertexBufferObject
-from py3gl4.elementbufferobject import ElementBufferObject
+from .elementbufferobject import ElementBufferObject
+from .vertexbufferobject import VertexBufferObject
 
 
 class VertexAttribute:
