@@ -6,9 +6,9 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE.md"]
 requires-python = ">=3.9"
-# authors = [
-#     { name = "你的名字", email = "你的邮箱" },
-# ]
+authors = [
+    { name = "Yiguo Tang", email = "yiguo.tang@outlook.com" },
+]
 keywords = ["opengl", "pyside6", "pyopengl", "3d", "graphics"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -32,10 +32,10 @@ dependencies = [
     "imgui>=2.0.0",
 ]
 
-# [project.urls]
-# Homepage = "https://github.com/你的用户名/glskeleton"
-# Repository = "https://github.com/你的用户名/glskeleton"
-# Changelog = "https://github.com/你的用户名/glskeleton/blob/main/CHANGELOG.md"
+[project.urls]
+Homepage = "https://github.com/EagleEatApple/glskeleton"
+Repository = "https://github.com/EagleEatApple/glskeleton"
+Changelog = "https://github.com/EagleEatApple/glskeleton/blob/main/CHANGELOG.md"
 
 [project.scripts]
 glskeleton = "glskeleton.app:main"
