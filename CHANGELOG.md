@@ -1,4 +1,11 @@
-### `2026-09-17`
+### `0.2.0` — `2026-09-17`
+
+Refactor OpenGL layer:
+- Replace py3gl4 with [gl46](https://github.com/EagleEatApple/gl46)
+- Remove PyGLM, use numpy for all matrix math (`mathutils.py`)
+- Remove imgui, use keyboard shortcuts for demo controls
+
+### `0.1.0` — `2026-09-17`
 
 Migrate package management system to [uv](https://github.com/astral-sh/uv)
 

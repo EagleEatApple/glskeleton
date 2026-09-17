@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/EagleEatApple/glskeleton/actions/workflows/ci.yml/badge.svg)](https://github.com/EagleEatApple/glskeleton/actions/workflows/ci.yml)
 
-GL Skeleton is a 3D OpenGL application template based on PySide6 and PyOpenGL.
-GL Skeleton requires at least python 3.9 and OpenGL 4.6, and runs on Windows and Linux.
+GL Skeleton is a 3D OpenGL application template based on PySide6 and [gl46](https://github.com/EagleEatApple/gl46).
+GL Skeleton requires at least Python 3.11 and OpenGL 4.6, and runs on Windows and Linux.
 
 If you enjoy the repository, please give my repo a star ⭐ ⬆️. 
 
@@ -13,43 +13,26 @@ If you enjoy the repository, please give my repo a star ⭐ ⬆️.
 ![screenshot](./screenshot/fractal.png)
 
 ## Requirements
-* Python >= 3.9
+* Python >= 3.11
 * OpenGL 4.6
 * Runtime dependencies (managed by [uv](https://github.com/astral-sh/uv), see `pyproject.toml`):
   * PySide6
   * PyOpenGL
   * numpy
-  * PyGLM
   * Pillow
-  * imgui
+  * [gl46](https://github.com/EagleEatApple/gl46)
 
 ## Current Features: :gear:  
 
-- [x] Refactory py3gl4 to only support OpenGL 4.6, and includes major OpenGL objects
-```python
-class Program:
-class VertexShader(Shader):
-class TessellationControlShader(Shader):
-class TessellationEvaluationShader(Shader):
-class GeometryShader(Shader):
-class FragmentShader(Shader):
-class ComputeShader(Shader):
-class VertexArrayObject:
-class VertexBufferObject:
-class ElementBufferObject:
-class Texture2D(Texture):
-class Framebuffer:
-class Renderbuffer:
-```
 - [x] Demo cube demonstrates the usage of framebuffer and renderbuffer
 - [x] Demo fractal demonstrates the usage of compute shader
-  - [x] Mouse control
-  - [x] Integrate with imgui
-- [x] Demo tessellation demonstrates the usage of all 5 shaders (VertexShader, TessellationControlShader, TessellationEvaluationShader, GeometryShader and FragmentShader)
-  - [x] Integrate with imgui
+  - [x] Mouse control (left drag pan, right drag / wheel zoom)
+  - [x] Up/Down adjust max iterations
+- [x] Demo tessellation demonstrates the usage of all 5 shaders
+  - [x] Up/Down adjust inner tessellation, Left/Right adjust outer
 
 ## Run
-Tested on Python 3.9.7, 3.10.6 and Windows 10 OS. This project uses [`uv`](https://github.com/astral-sh/uv) for dependency management.
+Tested on Python 3.11.8 and Windows 10 OS. This project uses [uv](https://github.com/astral-sh/uv) for dependency management.
 
 ### Command line (recommended, works everywhere)
 Clone the repository, then

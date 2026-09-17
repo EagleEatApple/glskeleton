@@ -1,27 +1,50 @@
 # refer to https://github.com/denisenkom/mandelbrot-pyopengl/
 # refer to https://github.com/jakubcerveny/gl-compute
-import sys
 
-import imgui
+"""Mandelbrot fractal via a compute shader — ported to gl46 + numpy.
+
+The ImGui panel has been replaced by keyboard shortcuts: Up/Down adjust
+max_iter. Mouse drag / wheel still pan and zoom as before.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
 import numpy as np
-from OpenGL.GL import *
+from gl46.barrier import Barrier
+from gl46.program import Program
+from gl46.shader import Shader, ShaderStage
+from gl46.texture import Texture2D
+from gl46.vertexarray import VertexArray
+from OpenGL.GL import (
+    GL_RGBA32F,
+    GL_TRIANGLE_FAN,
+    GL_WRITE_ONLY,
+    glDrawArrays,
+    glGetProgramiv,
+    glViewport,
+)
 from PySide6.QtCore import QPoint, Qt, QTimerEvent
-from PySide6.QtGui import QCloseEvent, QMouseEvent, QWheelEvent
+from PySide6.QtGui import QCloseEvent, QKeyEvent, QMouseEvent, QWheelEvent
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-from .baseapp import BaseApplication
-from .py3gl4.program import Program
-from .py3gl4.shader import ComputeShader, FragmentShader, VertexShader
-from .py3gl4.texture import Texture2D
-from .py3gl4.vertexarrayobject import VertexArrayObject
-from .qtimgui.pyside6 import PySide6Renderer
+try:
+    from OpenGL.GL import GL_COMPUTE_WORK_GROUP_SIZE
+except ImportError:
+    # Some PyOpenGL distributions do not export this constant; fall back to
+    # the value from the OpenGL 4.3 core spec.
+    GL_COMPUTE_WORK_GROUP_SIZE = 0x8267
+
+SHADER_DIR = Path(__file__).resolve().parent / "shaders"
 
 
 class GLFractalWidget(QOpenGLWidget):
     def __init__(self) -> None:
         super().__init__()
         self.startTimer(20)
-        self.tex = None
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.tex: Texture2D | None = None
         self.size_changed = False
         self.scale = 0.0
         self.panX = 0.0
@@ -33,77 +56,80 @@ class GLFractalWidget(QOpenGLWidget):
     def timerEvent(self, event: QTimerEvent) -> None:
         self.update()
 
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        key = event.key()
+        if key == Qt.Key.Key_Up:
+            self.max_iter = min(2000, self.max_iter + 10)
+        elif key == Qt.Key.Key_Down:
+            self.max_iter = max(50, self.max_iter - 10)
+        else:
+            super().keyPressEvent(event)
+            return
+        self.update()
+
+    # ------------------------------------------------------------------ setup
+
     def initializeGL(self) -> None:
-        # initialize opengl pipeline
-        vertex_shader = VertexShader(None, "glskeleton/shaders/fractal.vert")
-        fragment_shader = FragmentShader(None, "glskeleton/shaders/fractal.frag")
-        self.program = Program([vertex_shader, fragment_shader])
-        vertex_shader.delete()
-        fragment_shader.delete()
+        # ---- display program (fullscreen quad) ----
+        self.program = Program(
+            [
+                Shader.from_file(ShaderStage.VERTEX, SHADER_DIR / "fractal.vert"),
+                Shader.from_file(ShaderStage.FRAGMENT, SHADER_DIR / "fractal.frag"),
+            ]
+        )
 
-        compute_shader = ComputeShader(None, "glskeleton/shaders/fractal.comp")
-        self.compute_program = Program([compute_shader])
-        compute_shader.delete()
+        # ---- compute shader program ----
+        self.compute_program = Program(
+            [
+                Shader.from_file(ShaderStage.COMPUTE, SHADER_DIR / "fractal.comp"),
+            ]
+        )
 
-        # initialize vao
-        self.vao = VertexArrayObject()
+        # ---- fullscreen quad VAO (4 vertices, no VBO; positions come from gl_VertexID) ----
+        self.vao = VertexArray()
 
-        # initialize imgui
-        imgui.create_context()
-        self.impl = PySide6Renderer(self)
+    # ------------------------------------------------------------------ draw
 
     def paintGL(self) -> None:
-        self.compute_program.use()
-        loc = glGetUniformLocation(self.compute_program.program_id, "center")
-        glUniform2f(loc, self.panX, self.panY)
-        loc = glGetUniformLocation(self.compute_program.program_id, "scale")
-        glUniform1f(loc, self.scale)
-        loc = glGetUniformLocation(self.compute_program.program_id, "max_iter")
-        glUniform1i(loc, self.max_iter)
-        lsize = np.zeros(3, dtype=np.int32)
-        glGetProgramiv(self.compute_program.program_id,
-                       GL_COMPUTE_WORK_GROUP_SIZE, lsize)
-        ngroups = [0] * 3
-        ngroups[0] = int((self.width() + lsize[0]-1) / lsize[0])
-        ngroups[1] = int((self.height() + lsize[1]-1) / lsize[1])
-        ngroups[2] = 1
-        glDispatchCompute(ngroups[0], ngroups[1], ngroups[2])
-        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
+        if self.tex is None:
+            return
 
+        # ---- compute pass ----
+        self.compute_program.use()
+        self.compute_program.set_f("center", self.panX, self.panY)
+        self.compute_program.set_f("scale", self.scale)
+        self.compute_program.set_i("max_iter", self.max_iter)
+
+        lsize = np.zeros(3, dtype=np.int32)
+        glGetProgramiv(self.compute_program.id, GL_COMPUTE_WORK_GROUP_SIZE, lsize)
+
+        w = self.size().width()
+        h = self.size().height()
+        ngroups = (
+            int((w + lsize[0] - 1) / lsize[0]),
+            int((h + lsize[1] - 1) / lsize[1]),
+            1,
+        )
+        self.compute_program.dispatch(*ngroups)
+
+        # The compute pass writes to an image that will be sampled as a texture;
+        # post a barrier to make those writes visible to the draw pass.
+        Barrier.image_to_texture()
+
+        # ---- draw pass ----
         self.program.use()
-        loc = glGetUniformLocation(self.program.program_id, "u_Texture")
-        glUniform1i(loc, 0)
-        self.tex.bind(0)
+        self.program.set_i("u_Texture", 0)
+        self.tex.bind_to_unit(0)
 
         self.vao.bind()
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4)
-
-        # define imgui elements
-        self.impl.process_inputs()
-        imgui.new_frame()
-
-        imgui.set_next_window_position(1, 1, condition=imgui.FIRST_USE_EVER)
-        imgui.set_next_window_size(500, 180, condition=imgui.FIRST_USE_EVER)
-        imgui.begin("Settings")
-
-        imgui.text("Press the left mouse button and move to pan")
-        imgui.text("Press the right mouse button and move to zoom")
-        imgui.text("Use the mouse wheel to zoom")
-        changed, iter = imgui.slider_int(
-            "Maximum Iterations", self.max_iter, 50, 1000)
-        self.max_iter = iter
-        imgui.end()
-
-        # render imgui
-        imgui.render()
-        self.impl.render(imgui.get_draw_data())
 
     def resizeGL(self, w: int, h: int) -> None:
         self.makeCurrent()
         if self.tex is not None:
             self.tex.delete()
-        self.tex = Texture2D(1, GL_RGBA32F, w, h)
-        self.tex.bingImage(0, 0, GL_WRITE_ONLY)
+        self.tex = Texture2D(w, h, internalformat=GL_RGBA32F)
+        self.tex.bind_image(0, level=0, access=GL_WRITE_ONLY)
         glViewport(0, 0, w, h)
         if not self.size_changed:
             self.panX = w * 0.75
@@ -111,21 +137,21 @@ class GLFractalWidget(QOpenGLWidget):
             self.scale = 2.0 / float(h)
             self.size_changed = True
 
+    # ------------------------------------------------------------- interaction
+
     def mousePressEvent(self, event: QMouseEvent) -> None:
         self.lastPos = event.position()
         self.centerPos = QPoint(
-            self.lastPos.x(), self.height() - self.lastPos.y())
+            int(self.lastPos.x()), self.height() - int(self.lastPos.y())
+        )
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if imgui.is_any_item_active():
-            return
-
         deltaX = event.position().x() - self.lastPos.x()
         deltaY = event.position().y() - self.lastPos.y()
         button = event.buttons()
-        if button & Qt.RightButton:
-            self.zoom(float(deltaY/2))
-        elif button & Qt.LeftButton:
+        if button & Qt.MouseButton.RightButton:
+            self.zoom(float(deltaY / 2))
+        elif button & Qt.MouseButton.LeftButton:
             self.panX += deltaX
             self.panY -= deltaY
         self.lastPos = event.position()
@@ -138,9 +164,11 @@ class GLFractalWidget(QOpenGLWidget):
         self.panY = (self.scale * self.centerPos.y() - cy) / self.scale
 
     def wheelEvent(self, event: QWheelEvent) -> None:
-        self.centerPos = QPoint(event.pixelDelta().x(),
-                                self.height() - event.pixelDelta().y())
-        self.zoom(-float(event.angleDelta().y()) / 30.0)
+        pos = event.position()
+        self.centerPos = QPoint(int(pos.x()), self.height() - int(pos.y()))
+        delta = event.angleDelta().y()
+        if delta != 0:
+            self.zoom(-float(delta) / 30.0)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.makeCurrent()
@@ -149,16 +177,5 @@ class GLFractalWidget(QOpenGLWidget):
         self.compute_program.delete()
         if self.tex is not None:
             self.tex.delete()
+            self.tex = None
         return super().closeEvent(event)
-
-
-def test():
-    """Run GLWidget test"""
-    app = BaseApplication(sys.argv)
-    widget = GLFractalWidget()
-    widget.show()
-    sys.exit(app.exec())
-
-
-if __name__ == '__main__':
-    test()
